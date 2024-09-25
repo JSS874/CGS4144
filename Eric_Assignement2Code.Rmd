@@ -1,45 +1,4 @@
----
-title: "Obtaining Annotation for Ensembl IDs - Microarray"
-author: "CCDL for ALSF"
-date: "October 2020"
-output:   
-  html_notebook:
-    toc: true
-    toc_float: true
-    number_sections: true
-editor_options: 
-  markdown: 
-    wrap: sentence
----
-
-# Purpose of this analysis
-
-The purpose of this notebook is to provide an example of mapping gene IDs for microarray data obtained from refine.bio using `AnnotationDbi` packages [@Pages2020-package].
-
-⬇️ [**Jump to the analysis code**](#analysis) ⬇️
-
-# How to run this example
-
-For general information about our tutorials and the basic software packages you will need, please see our ['Getting Started' section](https://alexslemonade.github.io/refinebio-examples/01-getting-started/getting-started.html#how-this-tutorial-is-structured).
-We recommend taking a look at our [Resources for Learning R](https://alexslemonade.github.io/refinebio-examples/01-getting-started/getting-started.html#resources-for-learning-r) if you have not written code in R before.
-
-## Obtain the `.Rmd` file
-
-To run this example yourself, [download the `.Rmd` for this analysis by clicking this link](https://alexslemonade.github.io/refinebio-examples/02-microarray/gene-id-annotation_microarray_01_ensembl.Rmd).
-
-Clicking this link will most likely send this to your downloads folder on your computer.
-Move this `.Rmd` file to where you would like this example and its files to be stored.
-
-You can open this `.Rmd` file in RStudio and follow the rest of these steps from there.
-(See our [section about getting started with R notebooks](https://alexslemonade.github.io/refinebio-examples/01-getting-started/getting-started.html#how-to-get-and-use-rmds) if you are unfamiliar with `.Rmd` files.)
-
-## Set up your analysis folders
-
-Good file organization is helpful for keeping your data analysis project on track!
-We have set up some code that will automatically set up a folder structure for you.
-Run this next chunk to set up your folders!
-
-If you have trouble running this chunk, see our [introduction to using `.Rmd`s](https://alexslemonade.github.io/refinebio-examples/01-getting-started/getting-started.html#how-to-get-and-use-rmds) for more resources and explanations.
+**Gene Mapping**
 
 ```{r}
 # Create the data folder if it doesn't exist
@@ -64,69 +23,6 @@ if (!dir.exists(results_dir)) {
 }
 ```
 
-In the same place you put this `.Rmd` file, you should now have three new empty folders called `data`, `plots`, and `results`!
-
-## Obtain the dataset from refine.bio
-
-For general information about downloading data for these examples, see our ['Getting Started' section](https://alexslemonade.github.io/refinebio-examples/01-getting-started/getting-started.html#how-to-get-the-data).
-
-Go to this [dataset's page on refine.bio](https://www.refine.bio/experiments/GSE13490/cancer-stem-cells-are-enriched-in-the-side-population-cells-in-a-mouse-model-of-glioma).
-
-Click the "Download Now" button on the right side of this screen.
-
-<img src="https://github.com/AlexsLemonade/refinebio-examples/raw/40e47f4d3f39283effbd9843a457168061be9680/template/screenshots/download-now.png" width="200"/>
-
-Fill out the pop up window with your email and our Terms and Conditions:
-
-<img src="https://github.com/AlexsLemonade/refinebio-examples/raw/40e47f4d3f39283effbd9843a457168061be9680/template/screenshots/download-email.png" width="500"/>
-
-It may take a few minutes for the dataset to process.
-You will get an email when it is ready.
-
-## About the dataset we are using for this example
-
-For this example analysis, we will use this [mouse glioma stem cells dataset](https://www.refine.bio/experiments/GSE13490/cancer-stem-cells-are-enriched-in-the-side-population-cells-in-a-mouse-model-of-glioma).
-
-This dataset has 15 microarrays measuring gene expression in a transgenic mouse model of glioma.
-The authors compared cells from side populations and non-side populations in both tumor samples and normal neural stem cells.
-
-## Place the dataset in your new `data/` folder
-
-refine.bio will send you a download button in the email when it is ready.
-Follow the prompt to download a zip file that has a name with a series of letters and numbers and ends in `.zip`.
-Double clicking should unzip this for you and create a folder of the same name.
-
-<img src="https://github.com/AlexsLemonade/refinebio-examples/raw/40e47f4d3f39283effbd9843a457168061be9680/template/screenshots/download-folder-structure.png" width="400"/>
-
-For more details on the contents of this folder see [these docs on refine.bio](http://docs.refine.bio/en/latest/main_text.html#downloadable-files).
-
-The `<experiment_accession_id>` folder has the data and metadata TSV files you will need for this example analysis.
-Experiment accession IDs usually look something like `GSE1235` or `SRP12345`.
-
-Copy and paste the `GSE13490` folder into your newly created `data/` folder.
-
-## Check out our file structure! {#check-out-our-file-structure}
-
-Your new analysis folder should contain:
-
--   The example analysis `.Rmd` you downloaded\
--   A folder called "data" which contains:
-    -   The `GSE13490` folder which contains:
-        -   The gene expression\
-        -   The metadata TSV\
--   A folder for `plots` (currently empty)\
--   A folder for `results` (currently empty)
-
-Your example analysis folder should now look something like this (except with respective experiment accession ID and analysis notebook name you are using):
-
-<img src="https://github.com/AlexsLemonade/refinebio-examples/raw/40e47f4d3f39283effbd9843a457168061be9680/template/screenshots/analysis-folder-structure.png" width="400"/>
-
-In order for our example here to run without a hitch, we need these files to be in these locations so we've constructed a test to check before we get started with the analysis.
-These chunks will declare your file paths and double check that your files are in the right place.
-
-First we will declare our file paths to our data and metadata files, which should be in our data directory.
-This is handy to do because if we want to switch the dataset (see next section for more on this) we are using for this analysis, we will only have to change the file path here to get started.
-
 ```{r}
 # Define the file path to the data directory
 # Replace with the path of the folder the files will be in
@@ -143,8 +39,6 @@ data_file <- file.path(data_dir, "ERP105973.tsv")
 metadata_file <- file.path(data_dir, "metadata_ERP105973.tsv")
 ```
 
-Now that our file paths are declared, we can use the `file.exists()` function to check that the files are where we specified above.
-
 ```{r}
 # Check if the gene expression matrix file is at the path stored in `data_file`
 file.exists(data_file)
@@ -152,44 +46,6 @@ file.exists(data_file)
 # Check if the metadata file is at the file path stored in `metadata_file`
 file.exists(metadata_file)
 ```
-
-If the chunk above printed out `FALSE` to either of those tests, you won't be able to run this analysis *as is* until those files are in the appropriate place.
-
-If the concept of a "file path" is unfamiliar to you; we recommend taking a look at our [section about file paths](https://alexslemonade.github.io/refinebio-examples/01-getting-started/getting-started.html#an-important-note-about-file-paths-and-Rmds).
-
-# Using a different refine.bio dataset with this analysis?
-
-If you'd like to adapt an example analysis to use a different dataset from [refine.bio](https://www.refine.bio/), we recommend placing the files in the `data/` directory you created and changing the filenames and paths in the notebook to match these files (we've put comments to signify where you would need to change the code).
-We suggest saving plots and results to `plots/` and `results/` directories, respectively, as these are automatically created by the notebook.
-From here you can customize this analysis example to fit your own scientific questions and preferences.
-
-refine.bio data comes with gene level data identified by Ensembl IDs.
-Although this example notebook uses Ensembl IDs from Mouse, (<i>Mus musculus</i>), to obtain gene symbols this notebook can be easily converted for use with different species or annotation types <i>e.g.</i> protein IDs, gene ontology, accession numbers.
-
-<b>For different species</b>, wherever the abbreviation `org.Mm.eg.db` or `Mm` is written, it must be replaced with the respective species abbreviation <i>e.g.</i> for <i>Homo sapiens</i> `org.Hs.eg.db` or `Hs` would be used.
-In the case of our [RNA-seq gene identifier annotation example notebook](https://alexslemonade.github.io/refinebio-examples/03-rnaseq/gene-id-annotation_rnaseq_01_ensembl.html), a Zebrafish (<i>Danio rerio</i>) dataset is used, meaning `org.Dr.eg.db` or `Dr` would also need to be used there.
-A full list of the annotation R packages from Bioconductor is at this [link](https://bioconductor.org/packages/release/BiocViews.html#___AnnotationData).
-
-------------------------------------------------------------------------
-
-<!-- Do not delete this line -->
-
-<a name="analysis" style="padding-top:56px;margin-top:-56px;"> </a>
-
-# Obtaining Annotation for Ensembl IDs - Microarray
-
-refine.bio uses Ensembl IDs as the primary gene identifier in its data sets.
-While this is a consistent and useful identifier, a string of apparently random letters and numbers is not the most user-friendly or informative for interpretation.
-Luckily, we can use the Ensembl IDs that we have to obtain various different annotations at the gene/transcript level.
-Let's get ready to use the Ensembl IDs from our mouse dataset to obtain the associated gene symbols.
-
-## Install libraries
-
-See our Getting Started page with [instructions for package installation](https://alexslemonade.github.io/refinebio-examples/01-getting-started/getting-started.html#what-you-need-to-install) for a list of the other software you will need, as well as more tips and resources.
-
-In this analysis, we will be using the `org.Mm.eg.db` R package [@Carlson2019-mouse], which is part of the Bioconductor `AnnotationDbi` framework [@Pages2020-package].
-Bioconductor compiles annotations from various sources, and these packages provide convenient methods to access and translate among those annotations.
-[Other species can be used](#using-a-different-refinebio-dataset-with-this-analysis).
 
 ```{r}
 # Load BiocManager if it's not already installed
@@ -203,23 +59,13 @@ if (!("org.Ss.eg.db" %in% installed.packages())) {
 }
 ```
 
-Attach the packages we need for this analysis.
-Note that attaching `org.Mm.eg.db` will automatically also attach `AnnotationDbi`.
-
-```{r message=FALSE}
+```{r}
 # Attach the library
 library(org.Ss.eg.db)
 
 # We will need this so we can use the pipe: %>%
 library(magrittr)
 ```
-
-## Import and set up data
-
-Data downloaded from refine.bio include a metadata tab separated values (TSV) file and a data TSV file.
-This chunk of code will read the both TSV files and add them as data frames to your environment.
-
-We stored our file paths as objects named `metadata_file` and `data_file` in [this previous step](#check-out-our-file-structure).
 
 ```{r}
 
@@ -231,8 +77,6 @@ expression_df <- readr::read_tsv(data_file) %>%
   # Tuck away the Gene ID column as row names
   tibble::column_to_rownames("Gene")
 ```
-
-Let's ensure that the metadata and data are in the same sample order.
 
 ```{r}
 # Make the data in the order of the metadata
@@ -247,16 +91,6 @@ expression_df <- expression_df %>%
   tibble::rownames_to_column("Gene")
 ```
 
-## Map Ensembl IDs to gene symbols
-
-The main work of translating among annotations will be done with the the `AnnotationDbi` function `mapIds()`.
-The `mapIds()` function has a `multiVals` argument which denotes what to do when there are multiple mapped values for a single gene identifier.
-The default behavior is to return just the first mapped value.
-It is good to keep in mind that various downstream analyses may benefit from varied strategies at this step.
-Use `?mapIds` to see more options or strategies.
-
-In the next chunk, we will run the `mapIds()` function and supply the `multiVals` argument with the `"list"` option in order to get a large list with all the mapped values found for each gene identifier.
-
 ```{r}
 if (!requireNamespace("biomaRt", quietly = TRUE)) {
   install.packages("biomaRt")
@@ -270,7 +104,7 @@ mart <- useMart("ensembl", dataset = "sscrofa_gene_ensembl")
 mapped_df <- getBM(
   attributes = c("ensembl_gene_id", "entrezgene_id"),
   filters = "ensembl_gene_id",
-  values = expression_df$Ensembl, # Replace 'Gene' with your Ensembl ID column name
+  values = expression_df$Ensembl,
   mart = mart
 )
 
@@ -283,18 +117,10 @@ mapped_list <- merge(expression_df, mapped_df, by.x = "Gene", by.y = "ensembl_ge
 
 ```
 
-## Explore gene ID conversion
-
-Now, let's take a look at our mapped object to see how the mapping went.
-
 ```{r}
 # Let's use the `head()` function for a preview of our mapped list
 head(mapped_list)
 ```
-
-It looks like we have gene symbols that were successfully mapped to the Ensembl IDs we provided.
-However, the data is now in a `list` object, making it a little more difficult to explore.
-We are going to turn our list object into a data frame object in the next chunk.
 
 ```{r}
 # Let's make our list a bit more manageable by turning it into a data frame
@@ -311,23 +137,12 @@ Now let's take a peek at our data frame.
 head(mapped_df)
 ```
 
-We can see that our data frame has a new column `Symbol`.
-Let's get a summary of the gene symbols in the `Symbol` column of our mapped data frame.
-
 ```{r}
 # Use the `summary()` function to show the distribution of Symbol values
 # We need to use `as.factor()` here to get the counts of unique values
 # `maxsum = 10` limits the summary to 10 distinct values
 summary(as.factor(mapped_df$Symbol), maxsum = 10)
 ```
-
-There are 942 `NA`s in the `Symbol` column, which means that 942 out of the 17918 Ensembl IDs did not map to gene symbols.
-942 out of 17918 is not too bad a rate, in our opinion, but note that different gene identifier types will have different mapping rates and that is to be expected.
-Regardless, it is always good to be aware of how many genes you are potentially "losing" if you rely on this new gene identifier you've mapped to for downstream analyses.
-
-However, if you have almost all `NA`s it is possible that the function was executed incorrectly or you may want to consider using a different gene identifier, if possible.
-
-Now let's check to see if we have any genes that were mapped to multiple symbols.
 
 ```{r}
 library(biomaRt)
@@ -358,7 +173,7 @@ collapsed_mapped_df <- collapsed_mapped_df %>%
 
 # Step 4: Join the collapsed mapping dataframe with your expression dataframe
 final_mapped_df <- collapsed_mapped_df %>%
-  inner_join(expression_df, by = c("Ensembl" = "Ensembl"))
+  inner_join(expression_df, by = c("Ensembl" = "Gene"))
 
 
 # View the final dataframe
@@ -366,15 +181,12 @@ head(final_mapped_df)
 
 ```
 
-Looks like we have some cases where 3 gene symbols mapped to a single Ensembl ID. We have a total of 130 out of 17984 Ensembl IDs with multiple mappings to gene symbols.
-If we are not too worried about the 130 IDs with multiple mappings, we can filter them out for the purpose of having 1:1 mappings for our downstream analysis.
-
 ```{r}
 collapsed_mapped_df <- mapped_df %>%
   # Group by Ensembl IDs
-  dplyr::group_by(Ensembl) %>%
+  dplyr::group_by(ensembl_gene_id) %>%
   # Collapse the Entrez IDs `mapped_df` into one column named `all_entrez_ids`
-  dplyr::summarize(all_entrez_ids = paste(Entrez, collapse = ";"))
+  dplyr::summarize(all_entrez_ids = paste(entrezgene_id, collapse = ";"))
 
 
 collapsed_mapped_df %>%
@@ -386,17 +198,7 @@ collapsed_mapped_df %>%
   head()
 ```
 
-## Map Ensembl IDs to gene symbols -- filtering out multi mappings
-
-The next code chunk we will rerun the `mapIds()` function, this time supplying the `"filter"` option to the `multiVals` argument.
-This will remove all instances of multiple mappings and return a list of only the gene identifiers and symbols that had 1:1 mapping.
-Use `?mapIds` to see more options or strategies.
-
-Now, let's write our filtered and mapped results to file!
-
-## Write mapped results to file
-
-```{r Write to file}
+```{r}
 # Write mapped and annotated data frame to output file
 readr::write_tsv(final_mapped_df, file.path(
   results_dir,
@@ -404,88 +206,576 @@ readr::write_tsv(final_mapped_df, file.path(
 ))
 ```
 
-# Resources for further learning
-
--   Marc Carlson has prepared a nice [Introduction to Bioconductor Annotation Packages](https://bioconductor.org/packages/release/bioc/vignettes/AnnotationDbi/inst/doc/IntroToAnnotationPackages.pdf) [@Carlson2020-vignette]
--   See our [RNA-seq gene ID conversion notebook](https://alexslemonade.github.io/refinebio-examples/03-rnaseq/gene-id-annotation_rnaseq_01_ensembl.html) as another applicable example, since the steps for this workflow do not change with technology.
-
-# Session info
-
-At the end of every analysis, before saving your notebook, we recommend printing out your session info.
-This helps make your code more reproducible by recording what versions of software and packages you used to run this.
-
 ```{r}
-# Print session info
-sessioninfo::session_info()
+if (!("DESeq2" %in% installed.packages())) {
+  # Install this package if it isn't installed yet
+  BiocManager::install("DESeq2", update = FALSE)
+}
+if (!("EnhancedVolcano" %in% installed.packages())) {
+  # Install this package if it isn't installed yet
+  BiocManager::install("EnhancedVolcano", update = FALSE)
+}
+if (!("apeglm" %in% installed.packages())) {
+  # Install this package if it isn't installed yet
+  BiocManager::install("apeglm", update = FALSE)
+}
 ```
 
 ```{r}
-# Calculate per-gene variance
-results_dir <- file.path("results")
-results <- file.path(results_dir, "ERP105973_Gene_Symbols.tsv")
+# Attach the DESeq2 library
+library(DESeq2)
 
-# Install packages
-#install.packages("ggplot2")
+# Attach the ggplot2 library for plotting
+library(ggplot2)
 
-data <- read.table(results, header = TRUE)
-# Remove specified columns using base R
-data <- data[, !names(data) %in% c("Ensembl", "all_entrez_ids", "first_mapped_entrez_id")]
-meta_data <- read.csv(metadata_file, sep = "\t", header = TRUE)
-print(data)
-print(meta_data)
-
-data[] <- lapply(data, function(x) {
-    if (is.character(x)) {
-        as.numeric(x)  # Convert to numeric
-    } else {
-        x  # Keep as is
-    }
-})
-
-my_data <- as.matrix(data[sapply(data, is.numeric)])
-my_data <- round(my_data)
-samples <- colnames(my_data)
-
-meta_data$question <- ifelse(meta_data$refinebio_treatment == "enriched", "enriched", "barren")
+# We will need this so we can use the pipe: %>%
+library(magrittr)
+library(tidyverse)
 
 
-#library(ggplot2)  # For plotting
-install.packages("BiocManager")
-BiocManager::install("DESeq2")
-library(DESeq2)   # For PCA functions
+set.seed(12345)
 
+head(data)
+my_data_df <- as.data.frame(my_data)
+long_format_df <- my_data_df %>%
+  pivot_longer(cols = everything(), names_to = "Gene", values_to = "Expression")
+head(long_format_df)
 
-dds <- DESeqDataSetFromMatrix(
+head(my_data)
+length(my_data)
+head(final_mapped_df)
+
+ddset <- DESeqDataSetFromMatrix(
   countData = my_data,
   colData = meta_data,
   design =~ question
 )
 
-rld <- rlog(dds)
-new_data <- assay(rld)
-t(new_data)
-pc_object <- prcomp(new_data)
+deseq_object <- DESeq(ddset)
 
-pc_x <- pc_object$PC1
-pc_y <- pc_object$PC2
+deseq_results <- results(deseq_object)
 
-pca_data <- as.data.frame(pc_object$rotation[, c("PC1", "PC2")])
-pca_data$Group <- meta_data$refinebio_treatment
+# head(deseq_results)
 
+deseq_results <- lfcShrink(
+  deseq_object, # The original DESeq2 object after running DESeq()
+  coef = 2, # The log fold change coefficient used in DESeq(); the default is 2.
+  res = deseq_results # The original DESeq2 results table
+)
 
-# Load ggplot2
+# this is of class DESeqResults -- we want a data frame
+deseq_df <- deseq_results %>%
+  # make into data.frame
+  as.data.frame() %>%
+  # the gene names are row names -- let's make them a column for easy display
+  tibble::rownames_to_column("Gene") %>%
+  # add a column for significance threshold results
+  dplyr::mutate(threshold = padj < 0.05) %>%
+  # sort by statistic -- the highest values will be genes with
+  # higher expression in RPL10 mutated samples
+  dplyr::arrange(dplyr::desc(log2FoldChange))
+
+head(deseq_df)
+
+readr::write_tsv(
+  deseq_df,
+  file.path(
+    results_dir,
+    "ERP105973_diff_expr_results.tsv" # Replace with a relevant output file name
+  )
+)
+```
+
+**Density Plot**
+
+```{r Density Plot}
+# Load necessary libraries
+library(ggplot2)
+library(dplyr)
+
+# Check the size of the expression matrix
+dim(data) 
+
+# Log-scale the data (adding 1 to avoid log(0))
+log_scaled_data <- log(data + 1)
+
+# Calculate per-gene median expression
+gene_medians <- apply(log_scaled_data, 1, median)
+
+# Create a density plot
+density_plot <- ggplot(data.frame(Gene_Medians = gene_medians), aes(x = Gene_Medians)) +
+  geom_density(fill = "blue", alpha = 0.5) +
+  labs(title = "Density Plot of Log-Scaled Gene Medians", x = "Log-Scaled Median Expression", y = "Density") +
+  theme_minimal()
+
+# Display the density plot
+print(density_plot)
+
+#Save the density plot
+ggsave(
+  file.path(plots_dir, "ERP105973_density_plot.png"),
+  plot = density_plot
+)
+
+```
+
+**PCA Plot**
+
+```{r PCA Plot}
+
+# Attach the `DESeq2` library
+library(DESeq2)
+
+# Attach the `ggplot2` library for plotting
 library(ggplot2)
 
-# Plot using ggplot2
-ggplot(pca_data, aes(x = PC1, y = PC2, color = Group)) +
-  geom_point(size = 3) +
-  labs(
-    title = "Frontal Cortex Functioning of Barren vs. Enriched Piglets PCA Plot",
-    x = "Principal Component 1",
-    y = "Principal Component 2"
-  ) +
-  theme_minimal() +
-  theme(legend.title = element_text(size = 12), legend.text = element_text(size = 10)) +
-  scale_color_manual(values = c("enriched" = "red", "barren" = "blue"))  # Adjust colors as needed
+# We will need this so we can use the pipe: %>%
+library(magrittr)
+
+# Set the seed so our results are reproducible:
+set.seed(12345)
+
+# Read in metadata TSV file
+metadata <- readr::read_tsv(metadata_file)
+
+# Read in data TSV file
+expression_df <- readr::read_tsv(data_file) %>%
+  # Tuck away the gene ID column as row names, leaving only numeric values
+  tibble::column_to_rownames("Gene")
+
+# Make the sure the columns (samples) are in the same order as the metadata
+expression_df <- expression_df %>%
+  dplyr::select(metadata$refinebio_accession_code)
+
+# Check if this is in the same order
+all.equal(colnames(expression_df), metadata$refinebio_accession_code)
+
+# convert the columns we will be using for annotation into factors
+metadata <- metadata %>%
+  dplyr::mutate(
+    refinebio_treatment = factor(
+      refinebio_treatment,
+      # specify the possible levels in the order we want them to appear
+      levels = c("enriched", "barren")
+    ),
+  )
+
+# Define a minimum counts cutoff and filter the data to include
+# only rows (genes) that have total counts above the cutoff
+filtered_expression_df <- expression_df %>%
+  dplyr::filter(rowSums(.) >= 10)
+
+# The `DESeqDataSetFromMatrix()` function needs the values to be integers
+filtered_expression_df <- round(filtered_expression_df)
+
+meta_data$question <- ifelse(metadata$refinebio_treatment == "enriched", "enriched", "barren")
+
+# Create a `DESeqDataSet` object
+dds <- DESeqDataSetFromMatrix(
+  countData = filtered_expression_df, # the counts values for all samples in our dataset
+  colData = metadata, # annotation data for the samples in the counts data frame
+  design =~ refinebio_treatment
+)
+
+# Normalize and transform the data in the `DESeqDataSet` object
+# using the `vst()` function from the `DESeq2` R package
+dds_norm_vst <- vst(dds)
+
+# We first have to save the results of the `plotPCA()` function for use with `ggplot2`
+pca_results <-
+  plotPCA(
+    dds_norm_vst,
+    intgroup = c("refinebio_treatment"),
+    returnData = TRUE # This argument tells R to return the PCA values
+  )
+
+# Plot using `ggplot()` function and save to an object
+annotated_pca_plot <- ggplot(
+  pca_results,
+  aes(
+    x = PC1,
+    y = PC2,
+    color = refinebio_treatment,
+  )
+) +
+  # Make a scatter plot
+  geom_point() + ggtitle("PCA Plot")
+
+# display annotated plot
+annotated_pca_plot
+
+# Save plot using `ggsave()` function
+ggsave(
+  file.path(plots_dir, "ERP105973_pca_plot.png"),
+  # Replace with a file name relevant your plotted data
+  plot = annotated_pca_plot # the plot object that we want saved to file
+)
+```
+
+**UMAP Plot**
+
+```{r UMAP Plot}
+if (!("DESeq2" %in% installed.packages())) {
+  # Install DESeq2
+  BiocManager::install("DESeq2", update = FALSE)
+}
+
+if (!("umap" %in% installed.packages())) {
+  # Install umap package
+  BiocManager::install("umap", update = FALSE)
+}
+
+# Libraries
+library(DESeq2)
+library(umap)
+library(ggplot2)
+library(magrittr)
+
+# Set the seed so our results are reproducible:
+set.seed(12345)
+
+# convert the columns we will be using for annotation into factors
+metadata_umap <- metadata %>%
+  dplyr::select( # select only the columns that we will need for plotting
+    refinebio_treatment
+  ) %>%
+  dplyr::mutate( # Now let's convert the annotation variables into factors
+    refinebio_treatment = factor(
+      refinebio_treatment,
+      # specify the possible levels in the order we want them to appear
+      levels = c("enriched", "barren")
+    ),
+  )
+
+dds <- DESeqDataSetFromMatrix(
+  countData = filtered_expression_df, # the counts values for all samples in our dataset
+  colData = metadata, # annotation data for the samples in the counts data frame
+  design =~ refinebio_treatment
+)
+
+# Normalize and transform the data in the `DESeqDataSet` object
+# using the `vst()` function from the `DESeq2` R package
+dds_norm_vst <- vst(dds)
+
+# First we are going to retrieve the normalized data
+# from the `DESeqDataSet` object using the `assay()` function
+normalized_counts <- assay(dds_norm_vst) %>%
+  t() # We need to transpose this data so each row is a sample
+
+# Now perform UMAP on the normalized data
+umap_results <- umap::umap(normalized_counts)
+
+# Make into data frame for plotting with `ggplot2`
+# The UMAP values we need for plotting are stored in the `layout` element
+umap_plot_df <- data.frame(umap_results$layout) %>%
+  # Turn sample IDs stored as row names into a column
+  tibble::rownames_to_column("refinebio_accession_code") %>%
+  # Add the metadata into this data frame; match by sample IDs
+  dplyr::inner_join(metadata, by = "refinebio_accession_code")
+
+umap_plot_df
+
+# Plot using `ggplot()` function
+ggplot(
+  umap_plot_df,
+  aes(
+    x = X1,
+    y = X2,
+    color = refinebio_treatment # label points with different colors for each `subgroup`
+  )
+) +
+  geom_point() # This tells R that we want a scatterplot
+
+# Plot using `ggplot()` function and save to an object
+final_annotated_umap_plot <- ggplot(
+  umap_plot_df,
+  aes(
+    x = X1,
+    y = X2,
+    # plot points with different colors for each `refinebio_treatment` group
+    color = refinebio_treatment,
+  )
+) +
+  geom_point() + 
+  ggtitle("UMAP Plot") + 
+  xlab("UMAP 1") +
+  ylab("UMAP 2")
+
+# Display the plot that we saved above
+final_annotated_umap_plot
+
+ggsave(
+  file.path(
+    plots_dir,
+    "ERP105973_umap_plot.png" # Replace with a good file name for your plot
+  ),
+  plot = final_annotated_umap_plot
+)
+```
+
+**t-SNE Plot**
+
+```{r tSNE Plot}
+library(M3C)
+library(ggplot2)
+
+set.seed(12345)
+tsne_result <- tsne(data,labels = meta_data$refinebio_treatment)
+str(tsne_result)
+
+tsne_coords <- tsne_result$data
+
+tsne_df <- data.frame(tsne_coords, group = meta_data$refinebio_treatment)
+
+# Create the t-SNE plot
+tsne_plot <- ggplot(tsne_df, aes(x = X1, y = X2, color = group)) +
+     geom_point(size = 2) +
+     labs(title = "t-SNE Plot",
+          x = "t-SNE 1",
+          y = "t-SNE 2") +
+     theme_minimal() +
+     theme(legend.title = element_blank())
+
+# Print the plot
+print(tsne_plot)
+
+ggsave("plots/ERP10593_tsne_plot.png", plot = tsne_plot, width = 8, height = 6, dpi = 300)
+
+```
+
+**Volcano Plot**
+
+```{r Volcano Plot}
+if (!("DESeq2" %in% installed.packages())) {
+  # Install this package if it isn't installed yet
+  BiocManager::install("DESeq2", update = FALSE)
+}
+if (!("EnhancedVolcano" %in% installed.packages())) {
+  # Install this package if it isn't installed yet
+  BiocManager::install("EnhancedVolcano", update = FALSE)
+}
+if (!("apeglm" %in% installed.packages())) {
+  # Install this package if it isn't installed yet
+  BiocManager::install("apeglm", update = FALSE)
+}
+
+# Attach the DESeq2 library
+library(DESeq2)
+
+# Attach the ggplot2 library for plotting
+library(ggplot2)
+
+# We will need this so we can use the pipe: %>%
+library(magrittr)
+
+set.seed(12345)
+metadata_volcano <- metadata %>%
+  dplyr::mutate(refinebio_treatment = dplyr::case_when(
+    stringr::str_detect(refinebio_treatment, "enriched") ~ "enriched",
+    stringr::str_detect(refinebio_treatment, "barren") ~ "barren"
+  ))
+
+dplyr::select(metadata_volcano, refinebio_title, refinebio_treatment)
+
+# Print out a preview of `mutation_status`
+str(metadata_volcano$refinebio_treatment)
+
+# Make mutation_status a factor and set the levels appropriately
+metadata <- metadata %>%
+  dplyr::mutate(
+    # Here we define the values our factor variable can have and their order.
+    refinebio_treatment = factor(refinebio_treatment, levels = c("enriched", "barren"))
+  )
+
+# Define a minimum counts cutoff and filter the data to include
+# only rows (genes) that have total counts above the cutoff
+filtered_expression_df <- expression_df %>%
+  dplyr::filter(rowSums(.) >= 10)
+
+# round all expression counts
+gene_matrix <- round(filtered_expression_df)
+
+levels(metadata_volcano$refinebio_treatment)
+
+ddset <- DESeqDataSetFromMatrix(
+  # Here we supply non-normalized count data
+  countData = gene_matrix,
+  # Supply the `colData` with our metadata data frame
+  colData = metadata,
+  # Supply our experimental variable to `design`
+  design = ~refinebio_treatment
+)
+
+deseq_object <- DESeq(ddset)
+
+deseq_results <- results(deseq_object)
+
+deseq_results <- lfcShrink(
+  deseq_object, # The original DESeq2 object after running DESeq()
+  coef = 2, # The log fold change coefficient used in DESeq(); the default is 2.
+  res = deseq_results # The original DESeq2 results table
+)
+
+head(deseq_results)
+
+# this is of class DESeqResults -- we want a data frame
+deseq_df <- deseq_results %>%
+  # make into data.frame
+  as.data.frame() %>%
+  # the gene names are row names -- let's make them a column for easy display
+  tibble::rownames_to_column("Gene") %>%
+  # add a column for significance threshold results
+  dplyr::mutate(threshold = padj < 0.05) %>%
+  # sort by statistic -- the highest values will be genes with
+  # higher expression in RPL10 mutated samples
+  dplyr::arrange(dplyr::desc(log2FoldChange))
+
+head(deseq_df)
+
+readr::write_tsv(
+  deseq_df,
+  file.path(
+    results_dir,
+    "ERP105973_diff_expr_results.tsv" # Replace with a relevant output file name
+  )
+)
+
+# We'll assign this as `volcano_plot`
+volcano_plot <- EnhancedVolcano::EnhancedVolcano(
+  deseq_df,
+  lab = deseq_df$Gene,
+  x = "log2FoldChange",
+  y = "padj",
+  pCutoff = 0.01, # Loosen the cutoff since we supplied corrected p-values
+  xlim = c(-1.5, 1.5), # Adjust the x-axis limits (log2 fold change range)
+  ylim = c(0, -log10(0.01)),
+  col = c("black", "blue", "red"),
+)
+
+volcano_plot
+
+ggsave(
+  plot = volcano_plot,
+  file.path(plots_dir, "ERP105973_volcano_plot.png")
+) # Replace with a plot name relevant to your data
+
+# Sort the results by adjusted p-value and log2FoldChange
+top_degs <- deseq_df %>%
+  dplyr::arrange(padj, desc(log2FoldChange)) %>%
+  dplyr::slice_head(n = 50)  # Get the top 50
+
+# View the top 50 DEGs
+print(top_degs)
+
+write.csv(top_degs, "top_50_degs.csv", row.names = FALSE)
+```
+
+**Heatmap**
+
+```{r Heatmap}
+# Install ComplexHeatmap if not already installed
+if (!requireNamespace("ComplexHeatmap", quietly = TRUE)) {
+  install.packages("BiocManager")
+  BiocManager::install("ComplexHeatmap")
+}
+
+# Load necessary libraries
+library(ComplexHeatmap)
+library(circlize)
+
+sig_genes <- subset(deseq_results, padj < 0.05)
+
+# Extract the gene names
+significant_gene_names <- rownames(sig_genes)
+
+# Run DESeq to estimate size factors and perform differential expression analysis
+dds <- DESeq(dds)
+
+# Extract normalized counts
+norm_counts <- counts(dds, normalized = TRUE)
+
+# Subset the counts to only include significant genes
+sig_counts <- norm_counts[significant_gene_names, ]
+
+# Convert metadata groupings to a factor for color annotation
+groupings <- as.factor(metadata$refinebio_treatment)
+
+group_colors <- list(group = c("enriched" = "red", "barren" = "blue"))
+
+# Create annotation for the heatmap sidebar
+ha <- HeatmapAnnotation(group = groupings, col = group_colors)
+
+# Generate heatmap
+Heatmap(
+  t(scale(t(sig_counts))),                  
+  name = "Expression",                      
+  top_annotation = ha,                      
+  show_row_names = TRUE,                    
+  show_column_names = FALSE,                
+  cluster_rows = TRUE,                    
+  cluster_columns = TRUE,                   
+  col = colorRamp2(c(-2, 0, 2), c("blue", "white", "red")), 
+  row_names_gp = gpar(fontsize = 6),        
+  column_names_gp = gpar(fontsize = 8)     
+)
+```
+
+**Enrichment Analysis**
+
+```{r Enrichment Analysis}
+# Extract significant differentially expressed genes
+sig_genes <- res[which(res$padj < 0.05), ]
+
+# Load final_mapped_df that contains Ensembl to Entrez mappings
+final_mapped_df <- read.table(results, header = TRUE)
+
+# Check structure of final_mapped_df to ensure column names
+head(final_mapped_df)
+
+sig_genes$ensembl_gene_id <- rownames(sig_genes)
+
+# Merge significant genes with the mapping data
+merged_genes <- merge(as.data.frame(sig_genes), final_mapped_df, 
+                      by.x = "ensembl_gene_id", by.y = "Ensembl", all.x = TRUE)
+
+# Check column names in merged_genes to ensure correct column name for Entrez IDs
+head(merged_genes)
+
+# Extract Entrez Gene IDs
+entrez_gene_list <- merged_genes$first_mapped_entrez_id
+
+# Remove any NAs that might have resulted from unmapped genes
+entrez_gene_list <- na.omit(entrez_gene_list)
+
+# Remove any duplicates
+entrez_gene_list <- unique(entrez_gene_list)
+
+# Inspect the Entrez Gene list
+head(entrez_gene_list)
+
+# Load necessary libraries
+library(clusterProfiler)
+library(org.Ss.eg.db)
+library(DOSE)
+
+# clustProfiler with Gene Ontology
+
+ego <- enrichGO(
+  gene          = entrez_gene_list,  
+  OrgDb         = org.Ss.eg.db,      
+  keyType       = "ENTREZID",        
+  ont           = "BP",              
+  pAdjustMethod = "BH",              
+  pvalueCutoff  = 0.05,              
+  qvalueCutoff  = 0.2,               
+  readable      = TRUE               
+)
+
+head(ego)
+
+# Save the Gene Ontology enrichment results as a table
+go_results <- as.data.frame(ego)
+
+write.csv(go_results, file = "GO_enrichment_results.csv")
 
 ```
