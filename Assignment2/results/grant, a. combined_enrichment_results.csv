@@ -1,0 +1,537 @@
+term_id,term_name,p_value,p.adjust,qvalue,precision,recall,FoldEnrichment,methods_found,methods_included
+GO:0000165,MAPK cascade,3.37e-06,,,0.061403509,0.122093023,,1,0.0
+GO:0000166,nucleotide binding,0.01372289,,,0.145772595,0.079113924,,1,0.0
+GO:0000278,mitotic cell cycle,0.012876379,,,0.063352827,0.096153846,,1,0.0
+GO:0000323,lytic vacuole,0.040684167,,,0.034894399,0.102425876,,1,0.0
+GO:0000902,cell morphogenesis,2.63e-07,,,0.078947368,0.115220484,,1,0.0
+GO:0001501,skeletal system development,0.0031189,,,0.045808967,0.113801453,,1,0.0
+GO:0001525,angiogenesis,3.07e-05,,,0.047758285,0.129973475,,1,0.0
+GO:0001568,blood vessel development,5.61e-08,,,0.067251462,0.12849162,,1,0.0
+GO:0001667,ameboidal-type cell migration,1.39e-08,,,0.05165692,0.154069767,,1,0.0
+GO:0001725,stress fiber,0.039487982,,,0.01010101,0.203703704,,1,0.0
+GO:0001726,ruffle,0.000815228,,,0.018365473,0.17699115,,1,0.0
+GO:0001775,cell activation,4.47e-11,,,0.093567251,0.124352332,,1,0.0
+GO:0001786,phosphatidylserine binding,0.000102015,,,0.013605442,0.29787234,,1,0.0
+GO:0001816,cytokine production,6.83e-08,,,0.06920078,0.126110124,,1,0.0
+GO:0001817,regulation of cytokine production,4.91e-08,,,0.06920078,0.127012522,,1,0.0
+GO:0001818,negative regulation of cytokine production,0.000505333,,,0.030214425,0.151219512,,1,0.0
+GO:0001837,epithelial to mesenchymal transition,0.000388262,,,0.022417154,0.18699187,,1,0.0
+GO:0001932,regulation of protein phosphorylation,0.03259978,,,0.047758285,0.102725367,,1,0.0
+GO:0001944,vasculature development,1.57e-08,,,0.071150097,0.128295255,,1,0.0
+GO:0002040,sprouting angiogenesis,0.005498071,,,0.018518519,0.184466019,,1,0.0
+GO:0002042,cell migration involved in sprouting angiogenesis,0.019123427,,,0.011695906,0.244897959,,1,0.0
+GO:0002237,response to molecule of bacterial origin,1.25e-05,,,0.032163743,0.169230769,,1,0.0
+GO:0002250,adaptive immune response,0.008564959,,,0.037037037,0.120253165,,1,0.0
+GO:0002252,immune effector process,1.36e-06,,,0.058479532,0.12793177,,1,0.0
+GO:0002263,cell activation involved in immune response,0.002690167,,,0.030214425,0.140271493,,1,0.0
+GO:0002274,myeloid leukocyte activation,0.009292285,,,0.023391813,0.152866242,,1,0.0
+GO:0002366,leukocyte activation involved in immune response,0.006513226,,,0.029239766,0.136986301,,1,0.0
+GO:0002376,immune system process,5.16e-12,,,0.180311891,0.096656217,,1,0.0
+GO:0002429,immune response-activating cell surface receptor signaling pathway,0.03249662,,,0.025341131,0.136125654,,1,0.0
+GO:0002443,leukocyte mediated immunity,0.00578812,,,0.035087719,0.12543554,,1,0.0
+GO:0002460,adaptive immune response based on somatic recombination of immune receptors built from immunoglobulin superfamily domains,0.027109839,,,0.029239766,0.127659574,,1,0.0
+GO:0002521,leukocyte differentiation,2.39e-05,,,0.056530214,0.120582121,,1,0.0
+GO:0002573,myeloid leukocyte differentiation,0.001745668,,,0.028265107,0.148717949,,1,0.0
+GO:0002682,regulation of immune system process,6.71e-12,,,0.123781676,0.112091792,,1,0.0
+GO:0002683,negative regulation of immune system process,1.16e-05,,,0.047758285,0.133879781,,1,0.0
+GO:0002684,positive regulation of immune system process,1.38e-07,,,0.085769981,0.112531969,,1,0.0
+GO:0002685,regulation of leukocyte migration,0.002350974,,,0.025341131,0.156626506,,1,0.0
+GO:0002694,regulation of leukocyte activation,4.36e-06,,,0.05165692,0.132169576,,1,0.0
+GO:0002695,negative regulation of leukocyte activation,0.001658667,,,0.022417154,0.172932331,,1,0.0
+GO:0002696,positive regulation of leukocyte activation,0.040937158,,,0.029239766,0.125,,1,0.0
+GO:0002697,regulation of immune effector process,0.000505256,,,0.037037037,0.134751773,,1,0.0
+GO:0002698,negative regulation of immune effector process,0.011192661,,,0.016569201,0.191011236,,1,0.0
+GO:0002761,regulation of myeloid leukocyte differentiation,0.002511462,,,0.018518519,0.193877551,,1,0.0
+GO:0002762,negative regulation of myeloid leukocyte differentiation,0.000704647,,,0.011695906,0.324324324,,1,0.0
+GO:0002764,immune response-regulating signaling pathway,0.03108956,,,0.037037037,0.113772455,,1,0.0
+GO:0002768,immune response-regulating cell surface receptor signaling pathway,0.012028455,,,0.027290448,0.137931034,,1,0.0
+GO:0002790,peptide secretion,0.001775226,,,0.026315789,0.155172414,,1,0.0
+GO:0003779,actin binding,0.005618328,,,0.039844509,0.117142857,,1,0.0
+GO:0004672,protein kinase activity,0.000549188,,,0.058309038,0.109689214,,1,0.0
+GO:0004721,phosphoprotein phosphatase activity,0.002758921,,,0.024295432,0.154320988,,1,0.0
+GO:0004725,protein tyrosine phosphatase activity,0.002542503,,,0.016520894,0.2,,1,0.0
+GO:0005096,GTPase activator activity,0.000521007,,,0.028182702,0.154255319,,1,0.0
+GO:0005102,signaling receptor binding,3.55e-10,,,0.119533528,0.111312217,,1,0.0
+GO:0005178,integrin binding,1.24e-05,,,0.022351798,0.216981132,,1,0.0
+GO:0005215,transporter activity,0.043578442,,,0.092322643,0.084594835,,1,0.0
+GO:0005488,binding,6.04e-07,,,0.826044704,0.063560906,,1,0.0
+GO:0005515,protein binding,4.1800000000000005e-27,,,0.584062196,0.081447351,,1,0.0
+GO:0005543,phospholipid binding,8.52e-07,,,0.052478134,0.138461538,,1,0.0
+GO:0005737,cytoplasm,6.71e-21,,,0.592286501,0.071914372,,1,0.0
+GO:0005764,lysosome,0.040684167,,,0.034894399,0.102425876,,1,0.0
+GO:0005768,endosome,4.95e-05,,,0.063360882,0.103915663,,1,0.0
+GO:0005783,endoplasmic reticulum,0.002078661,,,0.094582185,0.083603896,,1,0.0
+GO:0005856,cytoskeleton,0.025125826,,,0.123966942,0.074462217,,1,0.0
+GO:0005886,plasma membrane,1.16e-16,,,0.359963269,0.080377281,,1,0.0
+GO:0005911,cell-cell junction,8.39e-06,,,0.044995409,0.126943005,,1,0.0
+GO:0005925,focal adhesion,6.08e-05,,,0.022956841,0.174825175,,1,0.0
+GO:0006468,protein phosphorylation,2.72e-07,,,0.09454191,0.106710671,,1,0.0
+GO:0006470,protein dephosphorylation,0.030874465,,,0.020467836,0.154411765,,1,0.0
+GO:0006793,phosphorus metabolic process,9.48e-09,,,0.169590643,0.090909091,,1,0.0
+GO:0006796,phosphate-containing compound metabolic process,3.54e-09,,,0.169590643,0.091966173,,1,0.0
+GO:0006810,transport,8.82e-20,,,0.307017544,0.09127789,,1,0.0
+GO:0006811,monoatomic ion transport,0.001122686,,,0.087719298,0.092497431,,1,0.0
+GO:0006812,monoatomic cation transport,0.000909425,,,0.076023392,0.097378277,,1,0.0
+GO:0006816,calcium ion transport,0.003596755,,,0.036062378,0.126279863,,1,0.0
+GO:0006874,intracellular calcium ion homeostasis,0.026330761,,,0.028265107,0.130044843,,1,0.0
+GO:0006897,endocytosis,9.45e-06,,,0.056530214,0.123667377,,1,0.0
+GO:0006909,phagocytosis,2.77e-06,,,0.028265107,0.197278912,,1,0.0
+GO:0006915,apoptotic process,3.76e-06,,,0.115984405,0.094594595,,1,0.0
+GO:0006935,chemotaxis,1.13e-06,,,0.045808967,0.146875,,1,0.0
+GO:0006950,response to stress,0.000501217,,,0.205653021,0.075518969,,1,0.0
+GO:0006952,defense response,0.043770942,,,0.101364522,0.081568627,,1,0.0
+GO:0006954,inflammatory response,0.001149099,,,0.054580897,0.109375,,1,0.0
+GO:0006955,immune response,0.000415321,,,0.110136452,0.08828125,,1,0.0
+GO:0006996,organelle organization,0.000732029,,,0.203703704,0.075288184,,1,0.0
+GO:0007010,cytoskeleton organization,2.65e-06,,,0.109161793,0.097137901,,1,0.0
+GO:0007015,actin filament organization,0.002858927,,,0.040935673,0.12,,1,0.0
+GO:0007044,cell-substrate junction assembly,0.02124247,,,0.013645224,0.212121212,,1,0.0
+GO:0007154,cell communication,3.95e-11,,,0.443469786,0.072741807,,1,0.0
+GO:0007155,cell adhesion,1.27e-19,0.00219399,0.001932183,0.133528265,0.132880698,1.996265027,2,0.0
+GO:0007159,leukocyte cell-cell adhesion,0.000308583,,,0.038011696,0.135416667,,1,0.0
+GO:0007162,negative regulation of cell adhesion,0.003644345,,,0.028265107,0.143564356,,1,0.0
+GO:0007165,signal transduction,1.82e-06,,,0.394736842,0.069863723,,1,0.0
+GO:0007166,cell surface receptor signaling pathway,2.36e-20,,,0.219298246,0.105534709,,1,0.0
+GO:0007167,enzyme-linked receptor protein signaling pathway,1.06e-06,,,0.080896686,0.110814419,,1,0.0
+GO:0007169,transmembrane receptor protein tyrosine kinase signaling pathway,2.81e-05,,,0.055555556,0.121019108,,1,0.0
+GO:0007188,adenylate cyclase-modulating G protein-coupled receptor signaling pathway,0.000124957,,,0.030214425,0.160621762,,1,0.0
+GO:0007229,integrin-mediated signaling pathway,0.001285033,,,0.018518519,0.20212766,,1,0.0
+GO:0007264,small GTPase-mediated signal transduction,0.005252343,,,0.039961014,0.11849711,,1,0.0
+GO:0007267,cell-cell signaling,1.68e-15,,,0.130604288,0.121047877,,1,0.0
+GO:0007268,chemical synaptic transmission,1.72e-09,,,0.064327485,0.141935484,,1,0.0
+GO:0007275,multicellular organism development,5.420000000000001e-26,,,0.31871345,0.0974084,,1,0.0
+GO:0007399,nervous system development,1.12e-11,,,0.161793372,0.099819603,,1,0.0
+GO:0007409,axonogenesis,0.013357209,,,0.037037037,0.118012422,,1,0.0
+GO:0007517,muscle organ development,0.022891538,,,0.029239766,0.128755365,,1,0.0
+GO:0007610,behavior,0.031257142,,,0.046783626,0.103671706,,1,0.0
+GO:0007611,learning or memory,0.014835154,,,0.024366472,0.145348837,,1,0.0
+GO:0008037,cell recognition,0.020735274,,,0.016569201,0.182795699,,1,0.0
+GO:0008047,enzyme activator activity,0.001499377,,,0.04664723,0.115662651,,1,0.0
+GO:0008092,cytoskeletal protein binding,0.033673928,,,0.069970845,0.091139241,,1,0.0
+GO:0008104,protein localization,8.34e-08,,,0.162768031,0.089688507,,1,0.0
+GO:0008219,cell death,4.22e-06,,,0.119883041,0.093394077,,1,0.0
+GO:0008283,cell population proliferation,2.83e-07,,,0.131578947,0.094471659,,1,0.0
+GO:0008284,positive regulation of cell population proliferation,2.34e-05,,,0.070175439,0.109756098,,1,0.0
+GO:0008289,lipid binding,1.46e-05,,,0.068027211,0.114192496,,1,0.0
+GO:0009306,protein secretion,0.015386449,,,0.030214425,0.129166667,,1,0.0
+GO:0009605,response to external stimulus,4.26e-07,,,0.16374269,0.087682672,,1,0.0
+GO:0009611,response to wounding,7.85e-05,,,0.044834308,0.130311615,,1,0.0
+GO:0009628,response to abiotic stimulus,0.019758489,,,0.063352827,0.094890511,,1,0.0
+GO:0009653,anatomical structure morphogenesis,9.81e-12,,,0.186159844,0.094930417,,1,0.0
+GO:0009719,response to endogenous stimulus,4.25e-07,,,0.108187135,0.100543478,,1,0.0
+GO:0009790,embryo development,0.03240507,,,0.07797271,0.087912088,,1,0.0
+GO:0009888,tissue development,5.74e-09,,,0.143274854,0.096837945,,1,0.0
+GO:0009891,positive regulation of biosynthetic process,0.012355218,,,0.153996101,0.076365394,,1,0.0
+GO:0009893,positive regulation of metabolic process,1.85e-06,,,0.213450292,0.080131723,,1,0.0
+GO:0009897,external side of plasma membrane,0.000361361,,,0.033057851,0.129496403,,1,0.0
+GO:0009914,hormone transport,0.001207017,,,0.031189084,0.142857143,,1,0.0
+GO:0009966,regulation of signal transduction,1.64e-11,,,0.198830409,0.092307692,,1,0.0
+GO:0009967,positive regulation of signal transduction,2.8e-05,,,0.105263158,0.094240838,,1,0.0
+GO:0009968,negative regulation of signal transduction,5.09e-05,,,0.093567251,0.096871847,,1,0.0
+GO:0009986,cell surface,1.01e-10,,,0.074380165,0.128775835,,1,0.0
+GO:0010033,response to organic substance,2.41e-13,,,0.174463938,0.100958827,,1,0.0
+GO:0010243,response to organonitrogen compound,9.69e-05,,,0.061403509,0.111900533,,1,0.0
+GO:0010557,positive regulation of macromolecule biosynthetic process,0.006544322,,,0.151072125,0.077538769,,1,0.0
+GO:0010595,positive regulation of endothelial cell migration,0.018598389,,,0.015594542,0.192771084,,1,0.0
+GO:0010604,positive regulation of macromolecule metabolic process,1.88e-06,,,0.199805068,0.081478537,,1,0.0
+GO:0010631,epithelial cell migration,0.000294582,,,0.03411306,0.144032922,,1,0.0
+GO:0010634,positive regulation of epithelial cell migration,0.029194675,,,0.018518519,0.165217391,,1,0.0
+GO:0010646,regulation of cell communication,9.960000000000001e-21,,,0.248538012,0.100631413,,1,0.0
+GO:0010647,positive regulation of cell communication,1.32e-08,,,0.125730994,0.100389105,,1,0.0
+GO:0010648,negative regulation of cell communication,3.62e-06,,,0.101364522,0.09914204,,1,0.0
+GO:0010717,regulation of epithelial to mesenchymal transition,0.036327195,,,0.014619883,0.192307692,,1,0.0
+GO:0010720,positive regulation of cell development,0.025332472,,,0.03411306,0.119047619,,1,0.0
+GO:0010721,negative regulation of cell development,1.41e-06,,,0.033138402,0.17989418,,1,0.0
+GO:0010817,regulation of hormone levels,0.00029823,,,0.044834308,0.124661247,,1,0.0
+GO:0010975,regulation of neuron projection development,0.002630241,,,0.03411306,0.131578947,,1,0.0
+GO:0012501,programmed cell death,4.22e-06,,,0.119883041,0.093394077,,1,0.0
+GO:0012505,endomembrane system,1.04e-11,,,0.23415978,0.084577114,,1,0.0
+GO:0012506,vesicle membrane,0.005901063,,,0.048668503,0.098696462,,1,0.0
+GO:0014069,postsynaptic density,0.002491924,,,0.022956841,0.143678161,,1,0.0
+GO:0014070,response to organic cyclic compound,0.007551264,,,0.048732943,0.107526882,,1,0.0
+GO:0014902,myotube differentiation,0.003459637,,,0.018518519,0.19,,1,0.0
+GO:0015031,protein transport,2.02e-05,,,0.092592593,0.099061522,,1,0.0
+GO:0015629,actin cytoskeleton,7.72e-06,,,0.044995409,0.127272727,,1,0.0
+GO:0015833,peptide transport,0.000426978,,,0.029239766,0.155440415,,1,0.0
+GO:0016020,membrane,5.46e-11,,,0.578512397,0.066568047,,1,0.0
+GO:0016043,cellular component organization,0.016366519,,,0.389863548,0.065008939,,1,0.0
+GO:0016192,vesicle-mediated transport,7.57e-11,,,0.122807018,0.108902334,,1,0.0
+GO:0016301,kinase activity,0.021723089,,,0.067055394,0.093495935,,1,0.0
+GO:0016310,phosphorylation,8.93e-07,,,0.108187135,0.099284436,,1,0.0
+GO:0016311,dephosphorylation,0.000321849,,,0.030214425,0.154228856,,1,0.0
+GO:0016358,dendrite development,0.003496579,,,0.024366472,0.157232704,,1,0.0
+GO:0016477,cell migration,4.2199999999999997e-23,,,0.150097466,0.134615385,,1,0.0
+GO:0016641,"oxidoreductase activity, acting on the CH-NH2 group of donors, oxygen as acceptor",0.016249834,,,0.006802721,0.388888889,,1,0.0
+GO:0016773,"phosphotransferase activity, alcohol group as acceptor",0.017609503,,,0.06122449,0.096625767,,1,0.0
+GO:0016791,phosphatase activity,0.000870426,,,0.034013605,0.13618677,,1,0.0
+GO:0017076,purine nucleotide binding,0.01261948,,,0.137026239,0.080204778,,1,0.0
+GO:0017156,calcium-ion regulated exocytosis,0.005003477,,,0.012670565,0.254901961,,1,0.0
+GO:0017158,regulation of calcium ion-dependent exocytosis,0.005125946,,,0.009746589,0.333333333,,1,0.0
+GO:0019199,transmembrane receptor protein kinase activity,0.019631754,,,0.013605442,0.197183099,,1,0.0
+GO:0019220,regulation of phosphate metabolic process,0.015890503,,,0.06042885,0.097026604,,1,0.0
+GO:0019722,calcium-mediated signaling,0.024143672,,,0.022417154,0.148387097,,1,0.0
+GO:0019725,cellular homeostasis,0.001367986,,,0.06042885,0.10455312,,1,0.0
+GO:0019838,growth factor binding,0.04955012,,,0.016520894,0.160377358,,1,0.0
+GO:0019899,enzyme binding,3.99e-05,,,0.138969874,0.088764742,,1,0.0
+GO:0019900,kinase binding,0.002087943,,,0.059280855,0.104631218,,1,0.0
+GO:0019901,protein kinase binding,0.008515804,,,0.052478134,0.104046243,,1,0.0
+GO:0019904,protein domain specific binding,0.007199937,,,0.048590865,0.107526882,,1,0.0
+GO:0021700,developmental maturation,0.001274536,,,0.03411306,0.135658915,,1,0.0
+GO:0022008,neurogenesis,2.15e-07,,,0.117933723,0.098534202,,1,0.0
+GO:0022407,regulation of cell-cell adhesion,0.000887534,,,0.040935673,0.125373134,,1,0.0
+GO:0022603,regulation of anatomical structure morphogenesis,1.26e-08,,,0.073099415,0.127118644,,1,0.0
+GO:0023051,regulation of signaling,5.8700000000000006e-21,,,0.249512671,0.100827097,,1,0.0
+GO:0023052,signaling,4.88e-12,,,0.442495127,0.073605707,,1,0.0
+GO:0023056,positive regulation of signaling,1.82e-08,,,0.125730994,0.099922541,,1,0.0
+GO:0023057,negative regulation of signaling,2.18e-06,,,0.102339181,0.0997151,,1,0.0
+GO:0023061,signal release,0.000128685,,,0.041910331,0.132716049,,1,0.0
+GO:0030001,metal ion transport,0.001169436,,,0.066276803,0.101492537,,1,0.0
+GO:0030027,lamellipodium,0.006703079,,,0.019283747,0.15,,1,0.0
+GO:0030029,actin filament-based process,9.71e-06,,,0.066276803,0.114864865,,1,0.0
+GO:0030030,cell projection organization,4.74e-07,,,0.111111111,0.099389712,,1,0.0
+GO:0030036,actin cytoskeleton organization,1.91e-07,,,0.065302144,0.126893939,,1,0.0
+GO:0030054,cell junction,1.11e-30,,,0.179981635,0.132611637,,1,0.0
+GO:0030055,cell-substrate junction,4.15e-05,,,0.023875115,0.173333333,,1,0.0
+GO:0030072,peptide hormone secretion,0.003729436,,,0.025341131,0.152941176,,1,0.0
+GO:0030073,insulin secretion,0.003228525,,,0.022417154,0.166666667,,1,0.0
+GO:0030097,hemopoiesis,6.41e-08,,,0.082846004,0.115961801,,1,0.0
+GO:0030098,lymphocyte differentiation,0.027974666,,,0.036062378,0.115625,,1,0.0
+GO:0030099,myeloid cell differentiation,1.13e-05,,,0.045808967,0.137026239,,1,0.0
+GO:0030133,transport vesicle,0.000196669,,,0.028466483,0.144186047,,1,0.0
+GO:0030154,cell differentiation,1.76e-19,,,0.279727096,0.094160105,,1,0.0
+GO:0030155,regulation of cell adhesion,6.83e-08,,,0.06920078,0.126110124,,1,0.0
+GO:0030182,neuron differentiation,0.00023488,,,0.090643275,0.094801223,,1,0.0
+GO:0030198,extracellular matrix organization,3.41e-05,,,0.037037037,0.149019608,,1,0.0
+GO:0030223,neutrophil differentiation,0.048558347,,,0.004873294,0.625,,1,0.0
+GO:0030234,enzyme regulator activity,3.79e-07,,,0.101068999,0.106122449,,1,0.0
+GO:0030312,external encapsulating structure,4.07e-05,,,0.037649219,0.131832797,,1,0.0
+GO:0030334,regulation of cell migration,4.04e-16,,,0.098440546,0.143669986,,1,0.0
+GO:0030335,positive regulation of cell migration,1.24e-07,,,0.054580897,0.141057935,,1,0.0
+GO:0030336,negative regulation of cell migration,0.006013898,,,0.028265107,0.140096618,,1,0.0
+GO:0030424,axon,0.003860595,,,0.034894399,0.114114114,,1,0.0
+GO:0030425,dendrite,1.61e-09,,,0.044995409,0.162251656,,1,0.0
+GO:0030659,cytoplasmic vesicle membrane,0.025083382,,,0.045913682,0.095238095,,1,0.0
+GO:0030695,GTPase regulator activity,8.56e-05,,,0.04664723,0.127659574,,1,0.0
+GO:0030851,granulocyte differentiation,0.000351293,,,0.011695906,0.342857143,,1,0.0
+GO:0031012,extracellular matrix,3.72e-05,,,0.037649219,0.132258065,,1,0.0
+GO:0031175,neuron projection development,1.8e-06,,,0.074074074,0.113772455,,1,0.0
+GO:0031252,cell leading edge,3.16e-08,,,0.04040404,0.16,,1,0.0
+GO:0031253,cell projection membrane,0.01373293,,,0.022956841,0.130208333,,1,0.0
+GO:0031325,positive regulation of cellular metabolic process,6.08e-05,,,0.192007797,0.078831533,,1,0.0
+GO:0031328,positive regulation of cellular biosynthetic process,0.012623792,,,0.153021442,0.076436222,,1,0.0
+GO:0031344,regulation of cell projection organization,0.00031167,,,0.049707602,0.118604651,,1,0.0
+GO:0031399,regulation of protein modification process,0.002265234,,,0.067251462,0.099137931,,1,0.0
+GO:0031410,cytoplasmic vesicle,1.91e-11,,,0.124885216,0.10437452,,1,0.0
+GO:0031589,cell-substrate adhesion,5.32e-05,,,0.038011696,0.144444444,,1,0.0
+GO:0031594,neuromuscular junction,0.002683558,,,0.011937557,0.228070175,,1,0.0
+GO:0031982,vesicle,3e-12,,,0.134067952,0.103840683,,1,0.0
+GO:0032101,regulation of response to external stimulus,0.000732959,,,0.075048733,0.098339719,,1,0.0
+GO:0032279,asymmetric synapse,0.001659376,,,0.023875115,0.143646409,,1,0.0
+GO:0032496,response to lipopolysaccharide,0.000112281,,,0.029239766,0.164835165,,1,0.0
+GO:0032501,multicellular organismal process,8.84e-13,,,0.467836257,0.073170732,,1,0.0
+GO:0032502,developmental process,3.1300000000000002e-27,,,0.403508772,0.089532872,,1,0.0
+GO:0032535,regulation of cellular component size,0.0443699,,,0.031189084,0.120754717,,1,0.0
+GO:0032553,ribonucleotide binding,0.002957952,,,0.135082604,0.082787373,,1,0.0
+GO:0032555,purine ribonucleotide binding,0.002929846,,,0.134110787,0.082932692,,1,0.0
+GO:0032640,tumor necrosis factor production,0.001460284,,,0.020467836,0.185840708,,1,0.0
+GO:0032680,regulation of tumor necrosis factor production,0.001460284,,,0.020467836,0.185840708,,1,0.0
+GO:0032879,regulation of localization,1.69e-16,,,0.15497076,0.114306254,,1,0.0
+GO:0032880,regulation of protein localization,2.06e-05,,,0.070175439,0.110091743,,1,0.0
+GO:0032940,secretion by cell,5.56e-06,,,0.063352827,0.118829982,,1,0.0
+GO:0032956,regulation of actin cytoskeleton organization,2.75e-05,,,0.037037037,0.150197628,,1,0.0
+GO:0032970,regulation of actin filament-based process,0.000131144,,,0.038011696,0.139784946,,1,0.0
+GO:0032989,cellular anatomical entity morphogenesis,0.000378852,,,0.057504873,0.110694184,,1,0.0
+GO:0033036,macromolecule localization,3.9e-08,,,0.189083821,0.086491306,,1,0.0
+GO:0033043,regulation of organelle organization,0.003753056,,,0.079922027,0.092446449,,1,0.0
+GO:0033365,protein localization to organelle,0.028073269,,,0.068226121,0.091743119,,1,0.0
+GO:0033993,response to lipid,1.9e-06,,,0.058479532,0.126849894,,1,0.0
+GO:0034097,response to cytokine,0.000345874,,,0.06920078,0.103197674,,1,0.0
+GO:0034220,monoatomic ion transmembrane transport,0.033038939,,,0.06920078,0.090909091,,1,0.0
+GO:0034329,cell junction assembly,0.000101592,,,0.040935673,0.135483871,,1,0.0
+GO:0034330,cell junction organization,1.47e-18,,,0.087719298,0.167286245,,1,0.0
+GO:0034446,substrate adhesion-dependent cell spreading,0.004098496,,,0.016569201,0.204819277,,1,0.0
+GO:0035091,phosphatidylinositol binding,0.022226368,,,0.029154519,0.125523013,,1,0.0
+GO:0035239,tube morphogenesis,6.54e-08,,,0.076998051,0.119878604,,1,0.0
+GO:0035265,organ growth,0.025662408,,,0.018518519,0.166666667,,1,0.0
+GO:0035295,tube development,1.23e-06,,,0.086744639,0.107358263,,1,0.0
+GO:0035418,protein localization to synapse,0.002360898,,,0.012670565,0.270833333,,1,0.0
+GO:0035556,intracellular signal transduction,2.69e-11,,,0.184210526,0.094311377,,1,0.0
+GO:0035592,establishment of protein localization to extracellular region,0.016756711,,,0.030214425,0.128630705,,1,0.0
+GO:0035639,purine ribonucleoside triphosphate binding,0.002501177,,,0.131195335,0.083591331,,1,0.0
+GO:0036094,small molecule binding,3.91e-05,,,0.346938776,0.072991208,,1,0.0
+GO:0036211,protein modification process,2.31e-06,,,0.169590643,0.084919473,,1,0.0
+GO:0036477,somatodendritic compartment,4.71e-10,,,0.056014692,0.145933014,,1,0.0
+GO:0040007,growth,0.002150118,,,0.063352827,0.101404056,,1,0.0
+GO:0040011,locomotion,6.75e-20,,,0.123781676,0.139713971,,1,0.0
+GO:0040012,regulation of locomotion,2.23e-17,,,0.107212476,0.141935484,,1,0.0
+GO:0040013,negative regulation of locomotion,0.000729379,,,0.033138402,0.141078838,,1,0.0
+GO:0040017,positive regulation of locomotion,5.55e-07,,,0.055555556,0.134433962,,1,0.0
+GO:0042060,wound healing,2.6e-05,,,0.038986355,0.145985401,,1,0.0
+GO:0042110,T cell activation,0.000919241,,,0.046783626,0.117647059,,1,0.0
+GO:0042127,regulation of cell population proliferation,5.92e-07,,,0.11208577,0.098712446,,1,0.0
+GO:0042325,regulation of phosphorylation,0.015690415,,,0.05165692,0.102514507,,1,0.0
+GO:0042330,taxis,1.4e-06,,,0.045808967,0.145962733,,1,0.0
+GO:0042578,phosphoric ester hydrolase activity,0.002983006,,,0.039844509,0.120234604,,1,0.0
+GO:0042592,homeostatic process,7.65e-08,,,0.122807018,0.098668755,,1,0.0
+GO:0042692,muscle cell differentiation,0.003523074,,,0.035087719,0.128113879,,1,0.0
+GO:0042802,identical protein binding,0.027575865,,,0.125364431,0.080273802,,1,0.0
+GO:0042886,amide transport,0.000535327,,,0.032163743,0.145374449,,1,0.0
+GO:0042981,regulation of apoptotic process,3.15e-05,,,0.095516569,0.097125867,,1,0.0
+GO:0042995,cell projection,3.85e-13,,,0.143250689,0.103585657,,1,0.0
+GO:0043005,neuron projection,3.39e-10,,,0.083562902,0.118954248,,1,0.0
+GO:0043062,extracellular structure organization,4.23e-05,,,0.037037037,0.147859922,,1,0.0
+GO:0043065,positive regulation of apoptotic process,8.09e-05,,,0.045808967,0.128767123,,1,0.0
+GO:0043067,regulation of programmed cell death,2.4e-05,,,0.098440546,0.096650718,,1,0.0
+GO:0043068,positive regulation of programmed cell death,3.35e-05,,,0.047758285,0.12962963,,1,0.0
+GO:0043087,regulation of GTPase activity,0.001040768,,,0.012670565,0.288888889,,1,0.0
+GO:0043167,ion binding,3.66e-05,,,0.336248785,0.073445128,,1,0.0
+GO:0043168,anion binding,2.01e-05,,,0.172011662,0.085014409,,1,0.0
+GO:0043197,dendritic spine,0.023155078,,,0.011937557,0.188405797,,1,0.0
+GO:0043235,receptor complex,1.37e-10,,,0.048668503,0.164086687,,1,0.0
+GO:0043408,regulation of MAPK cascade,3.81e-06,,,0.055555556,0.127802691,,1,0.0
+GO:0043410,positive regulation of MAPK cascade,0.005813252,,,0.038011696,0.120743034,,1,0.0
+GO:0043412,macromolecule modification,0.000464731,,,0.17251462,0.078561917,,1,0.0
+GO:0043491,phosphatidylinositol 3-kinase/protein kinase B signal transduction,0.000729318,,,0.032163743,0.143478261,,1,0.0
+GO:0043534,blood vessel endothelial cell migration,0.004046367,,,0.018518519,0.188118812,,1,0.0
+GO:0043542,endothelial cell migration,0.000188108,,,0.028265107,0.164772727,,1,0.0
+GO:0043547,positive regulation of GTPase activity,0.016487742,,,0.00877193,0.333333333,,1,0.0
+GO:0044087,regulation of cellular component biogenesis,1.08e-07,,,0.083820663,0.114209827,,1,0.0
+GO:0044089,positive regulation of cellular component biogenesis,0.03601987,,,0.041910331,0.1075,,1,0.0
+GO:0044297,cell body,0.003663457,,,0.027548209,0.127659574,,1,0.0
+GO:0044306,neuron projection terminus,0.016720139,,,0.011019284,0.206896552,,1,0.0
+GO:0044309,neuron spine,0.010041285,,,0.012855831,0.191780822,,1,0.0
+GO:0044419,biological process involved in interspecies interaction between organisms,0.013431231,,,0.100389864,0.084081633,,1,0.0
+GO:0044877,protein-containing complex binding,0.022720673,,,0.103012634,0.083993661,,1,0.0
+GO:0045121,membrane raft,7.72e-06,,,0.029384757,0.162436548,,1,0.0
+GO:0045177,apical part of cell,0.021304866,,,0.031221304,0.11038961,,1,0.0
+GO:0045184,establishment of protein localization,9.76e-08,,,0.115009747,0.100682594,,1,0.0
+GO:0045202,synapse,2.3400000000000003e-21,,,0.122130395,0.137681159,,1,0.0
+GO:0045229,external encapsulating structure organization,3.41e-05,,,0.037037037,0.149019608,,1,0.0
+GO:0045321,leukocyte activation,8.33e-10,,,0.083820663,0.125,,1,0.0
+GO:0045595,regulation of cell differentiation,7.02e-14,0.014152327,0.012463542,0.127680312,0.117068811,1.8080316,2,0.0
+GO:0045596,negative regulation of cell differentiation,1.37e-07,,,0.062378168,0.130879346,,1,0.0
+GO:0045597,positive regulation of cell differentiation,7.85e-05,,,0.064327485,0.110367893,,1,0.0
+GO:0045619,regulation of lymphocyte differentiation,0.020688912,,,0.021442495,0.153846154,,1,0.0
+GO:0045637,regulation of myeloid cell differentiation,0.001455987,,,0.025341131,0.160493827,,1,0.0
+GO:0045638,negative regulation of myeloid cell differentiation,0.002188346,,,0.014619883,0.238095238,,1,0.0
+GO:0045785,positive regulation of cell adhesion,0.004949074,,,0.038986355,0.12012012,,1,0.0
+GO:0046649,lymphocyte activation,3.32e-08,,,0.071150097,0.126297578,,1,0.0
+GO:0046879,hormone secretion,0.001630128,,,0.030214425,0.143518519,,1,0.0
+GO:0046883,regulation of hormone secretion,0.030246761,,,0.023391813,0.142857143,,1,0.0
+GO:0046903,secretion,1.37e-06,,,0.072124756,0.115805947,,1,0.0
+GO:0048167,regulation of synaptic plasticity,8.44e-08,,,0.028265107,0.2265625,,1,0.0
+GO:0048468,cell development,3.53e-15,,,0.199805068,0.099611273,,1,0.0
+GO:0048471,perinuclear region of cytoplasm,0.000646734,,,0.043158861,0.111904762,,1,0.0
+GO:0048513,animal organ development,3.38e-11,,,0.195906433,0.092117324,,1,0.0
+GO:0048514,blood vessel morphogenesis,1.45e-06,,,0.057504873,0.128820961,,1,0.0
+GO:0048518,positive regulation of biological process,6.74e-24,,,0.400584795,0.086782095,,1,0.0
+GO:0048519,negative regulation of biological process,2.91e-11,,,0.324561404,0.079097387,,1,0.0
+GO:0048522,positive regulation of cellular process,1.3300000000000001e-21,,,0.368421053,0.087297921,,1,0.0
+GO:0048523,negative regulation of cellular process,1.47e-10,,,0.307017544,0.079385081,,1,0.0
+GO:0048583,regulation of response to stimulus,1.02e-15,,,0.2582846,0.091410831,,1,0.0
+GO:0048584,positive regulation of response to stimulus,1.44e-08,,,0.152046784,0.09375,,1,0.0
+GO:0048585,negative regulation of response to stimulus,2.33e-06,,,0.115984405,0.095352564,,1,0.0
+GO:0048589,developmental growth,0.000805443,,,0.052631579,0.112266112,,1,0.0
+GO:0048646,anatomical structure formation involved in morphogenesis,1.34e-06,,,0.090643275,0.105322763,,1,0.0
+GO:0048666,neuron development,1.32e-05,,,0.080896686,0.105063291,,1,0.0
+GO:0048667,cell morphogenesis involved in neuron differentiation,0.000466689,,,0.047758285,0.119221411,,1,0.0
+GO:0048699,generation of neurons,3.22e-05,,,0.098440546,0.096098953,,1,0.0
+GO:0048731,system development,5.1399999999999994e-24,,,0.27582846,0.101035345,,1,0.0
+GO:0048762,mesenchymal cell differentiation,0.000713518,,,0.028265107,0.155080214,,1,0.0
+GO:0048786,presynaptic active zone,0.007753988,,,0.009182736,0.263157895,,1,0.0
+GO:0048812,neuron projection morphogenesis,1.5e-05,,,0.053606238,0.125284738,,1,0.0
+GO:0048856,anatomical structure development,3.36e-27,,,0.384015595,0.091330552,,1,0.0
+GO:0048858,cell projection morphogenesis,2.25e-05,,,0.054580897,0.122807018,,1,0.0
+GO:0048869,cellular developmental process,1.76e-19,,,0.279727096,0.094160105,,1,0.0
+GO:0048870,cell motility,4.39e-21,,,0.158869396,0.125,,1,0.0
+GO:0048878,chemical homeostasis,3.32e-05,,,0.076998051,0.104913679,,1,0.0
+GO:0050767,regulation of neurogenesis,0.001734023,,,0.033138402,0.136,,1,0.0
+GO:0050776,regulation of immune response,0.000766741,,,0.065302144,0.103235747,,1,0.0
+GO:0050778,positive regulation of immune response,0.046806538,,,0.050682261,0.099236641,,1,0.0
+GO:0050789,regulation of biological process,2.54e-11,,,0.686159844,0.065324302,,1,0.0
+GO:0050793,regulation of developmental process,2.1499999999999997e-23,,,0.200779727,0.115925718,,1,0.0
+GO:0050794,regulation of cellular process,7.49e-10,,,0.655945419,0.06526377,,1,0.0
+GO:0050801,monoatomic ion homeostasis,0.022149836,,,0.046783626,0.105032823,,1,0.0
+GO:0050803,regulation of synapse structure or activity,9.58e-05,,,0.027290448,0.173913043,,1,0.0
+GO:0050804,modulation of chemical synaptic transmission,5.93e-07,,,0.045808967,0.149681529,,1,0.0
+GO:0050806,positive regulation of synaptic transmission,0.001805597,,,0.018518519,0.197916667,,1,0.0
+GO:0050807,regulation of synapse organization,0.001004123,,,0.025341131,0.163522013,,1,0.0
+GO:0050808,synapse organization,1.62e-12,,,0.056530214,0.179012346,,1,0.0
+GO:0050839,cell adhesion molecule binding,0.000596201,,,0.030126336,0.147619048,,1,0.0
+GO:0050865,regulation of cell activation,1.36e-06,,,0.055555556,0.131336406,,1,0.0
+GO:0050866,negative regulation of cell activation,0.000883928,,,0.024366472,0.168918919,,1,0.0
+GO:0050867,positive regulation of cell activation,0.012266644,,,0.031189084,0.128514056,,1,0.0
+GO:0050896,response to stimulus,9.56e-14,,,0.550682261,0.070739952,,1,0.0
+GO:0050900,leukocyte migration,0.000238044,,,0.037037037,0.138686131,,1,0.0
+GO:0050920,regulation of chemotaxis,0.001854344,,,0.025341131,0.158536585,,1,0.0
+GO:0051017,actin filament bundle assembly,0.006118413,,,0.020467836,0.170731707,,1,0.0
+GO:0051046,regulation of secretion,2.32e-06,,,0.05165692,0.134517766,,1,0.0
+GO:0051049,regulation of transport,6.42e-12,,,0.116959064,0.115052733,,1,0.0
+GO:0051050,positive regulation of transport,0.001302737,,,0.054580897,0.108949416,,1,0.0
+GO:0051056,regulation of small GTPase mediated signal transduction,0.009916934,,,0.025341131,0.145251397,,1,0.0
+GO:0051093,negative regulation of developmental process,3.28e-09,,,0.079922027,0.124809741,,1,0.0
+GO:0051094,positive regulation of developmental process,3.39e-05,,,0.089668616,0.099137931,,1,0.0
+GO:0051128,regulation of cellular component organization,3.44e-15,,,0.179337232,0.104072398,,1,0.0
+GO:0051129,negative regulation of cellular component organization,0.030740347,,,0.050682261,0.100775194,,1,0.0
+GO:0051130,positive regulation of cellular component organization,3.12e-05,,,0.080896686,0.10310559,,1,0.0
+GO:0051173,positive regulation of nitrogen compound metabolic process,1.12e-05,,,0.175438596,0.082417582,,1,0.0
+GO:0051174,regulation of phosphorus metabolic process,0.008426737,,,0.061403509,0.0984375,,1,0.0
+GO:0051179,localization,8.35e-22,,,0.365497076,0.087760356,,1,0.0
+GO:0051208,sequestering of calcium ion,0.007868249,,,0.01754386,0.1875,,1,0.0
+GO:0051209,release of sequestered calcium ion into cytosol,0.015310137,,,0.016569201,0.186813187,,1,0.0
+GO:0051223,regulation of protein transport,0.009317296,,,0.036062378,0.121311475,,1,0.0
+GO:0051234,establishment of localization,2.5600000000000003e-22,,,0.331384016,0.091644205,,1,0.0
+GO:0051239,regulation of multicellular organismal process,6.43e-26,,,0.233918129,0.112044818,,1,0.0
+GO:0051240,positive regulation of multicellular organismal process,8.11e-11,,,0.1208577,0.109540636,,1,0.0
+GO:0051241,negative regulation of multicellular organismal process,8.62e-08,,,0.085769981,0.113548387,,1,0.0
+GO:0051246,regulation of protein metabolic process,0.014966699,,,0.104288499,0.083074534,,1,0.0
+GO:0051247,positive regulation of protein metabolic process,0.009995677,,,0.06920078,0.094164456,,1,0.0
+GO:0051249,regulation of lymphocyte activation,1.2e-05,,,0.046783626,0.135211268,,1,0.0
+GO:0051250,negative regulation of lymphocyte activation,0.001699384,,,0.020467836,0.184210526,,1,0.0
+GO:0051282,regulation of sequestering of calcium ion,0.005745047,,,0.01754386,0.191489362,,1,0.0
+GO:0051283,negative regulation of sequestering of calcium ion,0.004153351,,,0.01754386,0.195652174,,1,0.0
+GO:0051336,regulation of hydrolase activity,0.003168517,,,0.015594542,0.219178082,,1,0.0
+GO:0051345,positive regulation of hydrolase activity,0.004270308,,,0.010721248,0.305555556,,1,0.0
+GO:0051493,regulation of cytoskeleton organization,0.000187299,,,0.047758285,0.122807018,,1,0.0
+GO:0051641,cellular localization,2.22e-13,,,0.231968811,0.091013384,,1,0.0
+GO:0051649,establishment of localization in cell,0.001025218,,,0.122807018,0.084224599,,1,0.0
+GO:0051651,maintenance of location in cell,0.045070012,,,0.023391813,0.139534884,,1,0.0
+GO:0051668,localization within membrane,0.017178709,,,0.052631579,0.101503759,,1,0.0
+GO:0051716,cellular response to stimulus,5.55e-10,,,0.475633528,0.070499856,,1,0.0
+GO:0051924,regulation of calcium ion transport,0.021717602,,,0.020467836,0.157894737,,1,0.0
+GO:0051960,regulation of nervous system development,0.000660979,,,0.038986355,0.12987013,,1,0.0
+GO:0055074,calcium ion homeostasis,0.018237943,,,0.030214425,0.128099174,,1,0.0
+GO:0055080,monoatomic cation homeostasis,0.031594244,,,0.045808967,0.104444444,,1,0.0
+GO:0055082,intracellular chemical homeostasis,0.003451503,,,0.053606238,0.106382979,,1,0.0
+GO:0055085,transmembrane transport,2.18e-05,,,0.114035088,0.092271293,,1,0.0
+GO:0060076,excitatory synapse,0.038514084,,,0.008264463,0.243243243,,1,0.0
+GO:0060284,regulation of cell development,1.18e-11,,,0.078947368,0.139175258,,1,0.0
+GO:0060326,cell chemotaxis,0.002187696,,,0.031189084,0.139130435,,1,0.0
+GO:0060341,regulation of cellular localization,3.81e-05,,,0.075048733,0.105624143,,1,0.0
+GO:0060348,bone development,0.009691608,,,0.024366472,0.148809524,,1,0.0
+GO:0060429,epithelium development,0.040623476,,,0.079922027,0.086772487,,1,0.0
+GO:0060485,mesenchyme development,0.001630239,,,0.031189084,0.140969163,,1,0.0
+GO:0060541,respiratory system development,0.048588459,,,0.024366472,0.135869565,,1,0.0
+GO:0060562,epithelial tube morphogenesis,0.013766142,,,0.033138402,0.124087591,,1,0.0
+GO:0060589,nucleoside-triphosphatase regulator activity,8.56e-05,,,0.04664723,0.127659574,,1,0.0
+GO:0060627,regulation of vesicle-mediated transport,0.000478529,,,0.043859649,0.123966942,,1,0.0
+GO:0061024,membrane organization,0.002942333,,,0.058479532,0.103448276,,1,0.0
+GO:0061061,muscle structure development,3.54e-07,,,0.059454191,0.131182796,,1,0.0
+GO:0061572,actin filament bundle organization,0.007980441,,,0.020467836,0.168,,1,0.0
+GO:0062023,collagen-containing extracellular matrix,3.27e-07,,,0.031221304,0.176165803,,1,0.0
+GO:0062237,protein localization to postsynapse,2.32e-05,,,0.012670565,0.382352941,,1,0.0
+GO:0065007,biological regulation,5.37e-14,,,0.712475634,0.065944971,,1,0.0
+GO:0065008,regulation of biological quality,8.06e-25,,,0.223196881,0.11269685,,1,0.0
+GO:0070161,anchoring junction,1.06e-09,,,0.063360882,0.13372093,,1,0.0
+GO:0070201,regulation of establishment of protein localization,2.08e-05,,,0.046783626,0.132963989,,1,0.0
+GO:0070371,ERK1 and ERK2 cascade,0.020239499,,,0.028265107,0.131818182,,1,0.0
+GO:0070372,regulation of ERK1 and ERK2 cascade,0.012028455,,,0.027290448,0.137931034,,1,0.0
+GO:0070382,exocytic vesicle,0.007175023,,,0.018365473,0.153846154,,1,0.0
+GO:0070588,calcium ion transmembrane transport,0.037050737,,,0.028265107,0.127753304,,1,0.0
+GO:0070661,leukocyte proliferation,0.0443699,,,0.031189084,0.120754717,,1,0.0
+GO:0070727,cellular macromolecule localization,3.21e-08,,,0.164717349,0.090422686,,1,0.0
+GO:0070848,response to growth factor,0.001541818,,,0.052631579,0.109979633,,1,0.0
+GO:0070887,cellular response to chemical stimulus,1.5e-13,,,0.185185185,0.099113198,,1,0.0
+GO:0071216,cellular response to biotic stimulus,4.09e-05,,,0.027290448,0.180645161,,1,0.0
+GO:0071219,cellular response to molecule of bacterial origin,0.000103292,,,0.024366472,0.187969925,,1,0.0
+GO:0071222,cellular response to lipopolysaccharide,0.000171429,,,0.023391813,0.188976378,,1,0.0
+GO:0071310,cellular response to organic substance,6.34e-12,,,0.144249513,0.105113636,,1,0.0
+GO:0071345,cellular response to cytokine stimulus,0.000188956,,,0.065302144,0.1072,,1,0.0
+GO:0071363,cellular response to growth factor stimulus,0.001728022,,,0.05165692,0.110416667,,1,0.0
+GO:0071396,cellular response to lipid,0.000271744,,,0.043859649,0.126404494,,1,0.0
+GO:0071495,cellular response to endogenous stimulus,9.59e-06,,,0.097465887,0.098716683,,1,0.0
+GO:0071593,lymphocyte aggregation,0.018331763,,,0.003898635,1.0,,1,0.0
+GO:0071674,mononuclear cell migration,0.016412435,,,0.021442495,0.156028369,,1,0.0
+GO:0071692,protein localization to extracellular region,0.027608491,,,0.030214425,0.125506073,,1,0.0
+GO:0071702,organic substance transport,3.17e-08,,,0.15497076,0.092227378,,1,0.0
+GO:0071705,nitrogen compound transport,6.54e-08,,,0.128654971,0.097273397,,1,0.0
+GO:0071706,tumor necrosis factor superfamily cytokine production,0.002647432,,,0.020467836,0.179487179,,1,0.0
+GO:0071944,cell periphery,1.37e-19,,,0.390266299,0.081137839,,1,0.0
+GO:0072341,modified amino acid binding,0.011814399,,,0.013605442,0.205882353,,1,0.0
+GO:0072359,circulatory system development,2.1e-08,,,0.092592593,0.112692764,,1,0.0
+GO:0085029,extracellular matrix assembly,0.010244795,,,0.010721248,0.282051282,,1,0.0
+GO:0090025,regulation of monocyte chemotaxis,0.01110037,,,0.007797271,0.4,,1,0.0
+GO:0090130,tissue migration,0.000487863,,,0.03411306,0.141129032,,1,0.0
+GO:0090132,epithelium migration,0.000361177,,,0.03411306,0.142857143,,1,0.0
+GO:0097060,synaptic membrane,0.001337363,,,0.028466483,0.131914894,,1,0.0
+GO:0097120,receptor localization to synapse,0.00024736,,,0.013645224,0.29787234,,1,0.0
+GO:0097305,response to alcohol,0.024044805,,,0.016569201,0.180851064,,1,0.0
+GO:0097367,carbohydrate derivative binding,7.87e-05,,,0.15840622,0.084984359,,1,0.0
+GO:0097435,supramolecular fiber organization,0.003110189,,,0.061403509,0.101449275,,1,0.0
+GO:0097447,dendritic tree,1.61e-09,,,0.044995409,0.162251656,,1,0.0
+GO:0097517,contractile actin filament bundle,0.039487982,,,0.01010101,0.203703704,,1,0.0
+GO:0097529,myeloid leukocyte migration,0.012365557,,,0.022417154,0.154362416,,1,0.0
+GO:0097708,intracellular vesicle,2.71e-11,,,0.124885216,0.103896104,,1,0.0
+GO:0098552,side of membrane,1.54e-05,,,0.049586777,0.118942731,,1,0.0
+GO:0098588,bounding membrane of organelle,0.041902659,,,0.080808081,0.080291971,,1,0.0
+GO:0098590,plasma membrane region,9.33e-09,,,0.083562902,0.112068966,,1,0.0
+GO:0098609,cell-cell adhesion,7.66e-11,,,0.082846004,0.13117284,,1,0.0
+GO:0098655,monoatomic cation transmembrane transport,0.00760998,,,0.061403509,0.098746082,,1,0.0
+GO:0098657,import into cell,8.06e-06,,,0.06920078,0.11323764,,1,0.0
+GO:0098660,inorganic ion transmembrane transport,0.023837304,,,0.064327485,0.093883357,,1,0.0
+GO:0098662,inorganic cation transmembrane transport,0.019786623,,,0.058479532,0.097402597,,1,0.0
+GO:0098685,Schaffer collateral - CA1 synapse,0.005110985,,,0.013774105,0.192307692,,1,0.0
+GO:0098772,molecular function regulator activity,1.53e-06,,,0.139941691,0.093264249,,1,0.0
+GO:0098793,presynapse,1.19e-06,,,0.043158861,0.137829912,,1,0.0
+GO:0098794,postsynapse,4.22e-08,,,0.049586777,0.14025974,,1,0.0
+GO:0098796,membrane protein complex,0.000867253,,,0.086317723,0.08744186,,1,0.0
+GO:0098797,plasma membrane protein complex,6.55e-06,,,0.051423324,0.119914347,,1,0.0
+GO:0098802,plasma membrane signaling receptor complex,7.88e-06,,,0.024793388,0.182432432,,1,0.0
+GO:0098857,membrane microdomain,7.72e-06,,,0.029384757,0.162436548,,1,0.0
+GO:0098868,bone growth,0.023125695,,,0.00877193,0.321428571,,1,0.0
+GO:0098916,anterograde trans-synaptic signaling,1.72e-09,,,0.064327485,0.141935484,,1,0.0
+GO:0098969,neurotransmitter receptor transport to postsynaptic membrane,0.037579836,,,0.005847953,0.5,,1,0.0
+GO:0098978,glutamatergic synapse,9.36e-06,,,0.036730946,0.14084507,,1,0.0
+GO:0098984,neuron to neuron synapse,0.000442697,,,0.026629936,0.144278607,,1,0.0
+GO:0099072,regulation of postsynaptic membrane neurotransmitter receptor levels,1.08e-05,,,0.01754386,0.28125,,1,0.0
+GO:0099173,postsynapse organization,0.042555851,,,0.018518519,0.161016949,,1,0.0
+GO:0099177,regulation of trans-synaptic signaling,5.93e-07,,,0.045808967,0.149681529,,1,0.0
+GO:0099503,secretory vesicle,0.00857125,,,0.034894399,0.110144928,,1,0.0
+GO:0099536,synaptic signaling,1.85e-09,,,0.066276803,0.139344262,,1,0.0
+GO:0099537,trans-synaptic signaling,2.32e-09,,,0.064327485,0.141025641,,1,0.0
+GO:0099572,postsynaptic specialization,0.000168748,,,0.026629936,0.151041667,,1,0.0
+GO:0099637,neurotransmitter receptor transport,0.025551017,,,0.007797271,0.363636364,,1,0.0
+GO:0110053,regulation of actin filament organization,0.023077967,,,0.027290448,0.133333333,,1,0.0
+GO:0110165,cellular anatomical entity,0.000277994,,,0.995408632,0.055204726,,1,0.0
+GO:0120025,plasma membrane bounded cell projection,3.53e-13,,,0.140495868,0.104508197,,1,0.0
+GO:0120035,regulation of plasma membrane bounded cell projection organization,0.000492803,,,0.048732943,0.117924528,,1,0.0
+GO:0120036,plasma membrane bounded cell projection organization,1.75e-06,,,0.108187135,0.098143236,,1,0.0
+GO:0120039,plasma membrane bounded cell projection morphogenesis,1.77e-05,,,0.054580897,0.123620309,,1,0.0
+GO:0140352,export from cell,1.19e-05,,,0.066276803,0.114285714,,1,0.0
+GO:0140677,molecular function activator activity,0.035438602,,,0.072886297,0.090036014,,1,0.0
+GO:0141124,intracellular signaling cassette,5.84e-12,,,0.139376218,0.106716418,,1,0.0
+GO:0150034,distal axon,0.018123466,,,0.016528926,0.153846154,,1,0.0
+GO:0150115,cell-substrate junction organization,0.010880592,,,0.014619883,0.211267606,,1,0.0
+GO:0150146,cell junction disassembly,0.000835825,,,0.00877193,0.45,,1,0.0
+GO:1901265,nucleoside phosphate binding,0.01372289,,,0.145772595,0.079113924,,1,0.0
+GO:1901363,heterocyclic compound binding,0.01089945,,,0.153547133,0.078685259,,1,0.0
+GO:1901652,response to peptide,0.000317012,,,0.037037037,0.137184116,,1,0.0
+GO:1901698,response to nitrogen compound,0.000433321,,,0.065302144,0.10485133,,1,0.0
+GO:1901700,response to oxygen-containing compound,7.31e-14,,,0.116959064,0.12207528,,1,0.0
+GO:1901701,cellular response to oxygen-containing compound,2.34e-09,,,0.088693957,0.119422572,,1,0.0
+GO:1901888,regulation of cell junction assembly,0.000591027,,,0.024366472,0.172413793,,1,0.0
+GO:1902105,regulation of leukocyte differentiation,2.78e-05,,,0.035087719,0.155172414,,1,0.0
+GO:1902106,negative regulation of leukocyte differentiation,0.00030998,,,0.01754386,0.230769231,,1,0.0
+GO:1902414,protein localization to cell junction,0.001344154,,,0.016569201,0.220779221,,1,0.0
+GO:1902531,regulation of intracellular signal transduction,3.76e-06,,,0.115984405,0.094594595,,1,0.0
+GO:1903053,regulation of extracellular matrix organization,0.036472569,,,0.010721248,0.25,,1,0.0
+GO:1903305,regulation of regulated secretory pathway,0.04668311,,,0.015594542,0.179775281,,1,0.0
+GO:1903530,regulation of secretion by cell,5.54e-06,,,0.047758285,0.136871508,,1,0.0
+GO:1903539,protein localization to postsynaptic membrane,2.32e-05,,,0.012670565,0.382352941,,1,0.0
+GO:1903540,establishment of protein localization to postsynaptic membrane,0.037579836,,,0.005847953,0.5,,1,0.0
+GO:1903555,regulation of tumor necrosis factor superfamily cytokine production,0.002647432,,,0.020467836,0.179487179,,1,0.0
+GO:1903706,regulation of hemopoiesis,2.64e-05,,,0.040935673,0.141891892,,1,0.0
+GO:1903707,negative regulation of hemopoiesis,0.000570243,,,0.01754386,0.222222222,,1,0.0
+GO:1903829,positive regulation of protein localization,0.049603787,,,0.037037037,0.11143695,,1,0.0
+GO:2000026,regulation of multicellular organismal development,1.66e-15,0.010571193,0.009309742,0.122807018,0.124876115,1.865860287,2,0.0
+GO:2000145,regulation of cell motility,9.47e-16,,,0.101364522,0.139597315,,1,0.0
+GO:2000146,negative regulation of cell motility,0.00199629,,,0.030214425,0.142201835,,1,0.0
+GO:2000147,positive regulation of cell motility,6.31e-07,,,0.054580897,0.1352657,,1,0.0
+REAC:R-SSC-1430728,Metabolism,1.5322916990711416e-06,,,0.2041640770665009,0.95286439448876,,1,1.0
+REAC:R-SSC-199991,Membrane Trafficking,0.0002448812910151,,,0.0683654443753884,0.9691629955947136,,1,1.0
+REAC:R-SSC-422475,Axon guidance,0.0048768423787164,,,0.0253262896208825,0.987878787878788,,1,1.0
+REAC:R-SSC-556833,Metabolism of lipids,0.0026552420973065,,,0.0669670602858918,0.96420581655481,,1,1.0
+REAC:R-SSC-9006934,Signaling by Receptor Tyrosine Kinases,0.0346035600422396,,,0.0467681789931634,0.9647435897435898,,1,1.0
+REAC:R-SSC-9012999,RHO GTPase cycle,3.871394652483731e-07,,,0.0520509633312616,0.9882005899705014,,1,1.0
+REAC:R-SSC-9013149,RAC1 GTPase cycle,0.0068274309666791,,,0.0208203853325046,0.9925925925925926,,1,1.0
+REAC:R-SSC-9675108,Nervous system development,0.0045227108566217,,,0.0254816656308266,0.9879518072289156,,1,1.0
