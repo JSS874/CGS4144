@@ -1,0 +1,781 @@
+**Gene Mapping**
+
+```{r}
+# Create the data folder if it doesn't exist
+if (!dir.exists("data")) {
+  dir.create("data")
+}
+
+# Define the file path to the plots directory
+plots_dir <- "plots"
+
+# Create the plots folder if it doesn't exist
+if (!dir.exists(plots_dir)) {
+  dir.create(plots_dir)
+}
+
+# Define the file path to the results directory
+results_dir <- "results"
+
+# Create the results folder if it doesn't exist
+if (!dir.exists(results_dir)) {
+  dir.create(results_dir)
+}
+```
+
+```{r}
+# Define the file path to the data directory
+# Replace with the path of the folder the files will be in
+data_dir <- file.path("data", "ERP105973")
+
+# Declare the file path to the gene expression matrix file
+# inside directory saved as `data_dir`
+# Replace with the path to your dataset file
+data_file <- file.path(data_dir, "ERP105973.tsv")
+
+# Declare the file path to the metadata file
+# inside the directory saved as `data_dir`
+# Replace with the path to your metadata file
+metadata_file <- file.path(data_dir, "metadata_ERP105973.tsv")
+```
+
+```{r}
+# Check if the gene expression matrix file is at the path stored in `data_file`
+file.exists(data_file)
+
+# Check if the metadata file is at the file path stored in `metadata_file`
+file.exists(metadata_file)
+```
+
+```{r}
+# Load BiocManager if it's not already installed
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+# Install the mouse annotation package
+if (!("org.Ss.eg.db" %in% installed.packages())) {
+  # Install this package if it isn't installed yet
+  BiocManager::install("org.Ss.eg.db", update = FALSE)
+}
+```
+
+```{r}
+# Attach the library
+library(org.Ss.eg.db)
+
+# We will need this so we can use the pipe: %>%
+library(magrittr)
+```
+
+```{r}
+
+# Read in metadata TSV file
+metadata <- readr::read_tsv(metadata_file)
+
+# Read in data TSV file
+expression_df <- readr::read_tsv(data_file) %>%
+  # Tuck away the Gene ID column as row names
+  tibble::column_to_rownames("Gene")
+```
+
+```{r}
+# Make the data in the order of the metadata
+expression_df <- expression_df %>%
+  dplyr::select(metadata$refinebio_accession_code)
+
+# Check if this is in the same order
+all.equal(colnames(expression_df), metadata$refinebio_accession_code)
+
+# Bring back the "Gene" column in preparation for mapping
+expression_df <- expression_df %>%
+  tibble::rownames_to_column("Gene")
+```
+
+```{r}
+if (!requireNamespace("biomaRt", quietly = TRUE)) {
+  install.packages("biomaRt")
+  
+library(biomaRt)
+
+# Set up the connection to the Ensembl database for Sus scrofa (pig)
+mart <- useMart("ensembl", dataset = "sscrofa_gene_ensembl")
+
+# Get the mapping from Ensembl IDs to gene symbols
+mapped_df <- getBM(
+  attributes = c("ensembl_gene_id", "entrezgene_id"),
+  filters = "ensembl_gene_id",
+  values = expression_df$Ensembl,
+  mart = mart
+)
+
+colnames(mapped_df) <- c("Ensembl", "Entrez")
+head(mapped_df)
+
+# Merge the mapped data with your expression data
+mapped_list <- merge(expression_df, mapped_df, by.x = "Gene", by.y = "ensembl_gene_id", all.x = TRUE)
+}
+
+```
+
+```{r}
+# Let's use the `head()` function for a preview of our mapped list
+head(mapped_list)
+```
+
+```{r}
+# Let's make our list a bit more manageable by turning it into a data frame
+mapped_df <- mapped_list %>%
+  tibble::enframe(name = "Ensembl", value = "Symbol") %>%
+  # enframe() makes a `list` column; we will simplify it with unnest()
+  # This will result in a data frame with one row per list item
+  tidyr::unnest(cols = Symbol)
+```
+
+Now let's take a peek at our data frame.
+
+```{r}
+head(mapped_df)
+```
+
+```{r}
+# Use the `summary()` function to show the distribution of Symbol values
+# We need to use `as.factor()` here to get the counts of unique values
+# `maxsum = 10` limits the summary to 10 distinct values
+summary(as.factor(mapped_df$Symbol), maxsum = 10)
+```
+
+```{r}
+library(biomaRt)
+library(dplyr)
+library(tibble)
+
+# Connect to the Ensembl database for Sus scrofa (or the species you are working with)
+mart <- useMart("ensembl", dataset = "sscrofa_gene_ensembl")
+
+# Step 1: Get the mapping from Ensembl IDs to Entrez IDs using biomaRt
+mapped_df <- getBM(
+  attributes = c("ensembl_gene_id", "entrezgene_id"),
+  filters = "ensembl_gene_id",
+  values = expression_df$Gene, # Replace 'Ensembl' with your column name
+  mart = mart
+)
+
+# Step 2: Process the mapping to get the first mapped Entrez ID and all mapped Entrez IDs
+# Collapse multiple Entrez IDs into a single string separated by semicolons
+collapsed_mapped_df <- mapped_df %>%
+  group_by(ensembl_gene_id) %>%
+  summarise(all_entrez_ids = paste(entrezgene_id, collapse = ";"),
+            first_mapped_entrez_id = first(entrezgene_id))
+
+# Step 3: Rename columns to match your desired output
+collapsed_mapped_df <- collapsed_mapped_df %>%
+  rename(Ensembl = ensembl_gene_id)
+
+# Step 4: Join the collapsed mapping dataframe with your expression dataframe
+final_mapped_df <- collapsed_mapped_df %>%
+  inner_join(expression_df, by = c("Ensembl" = "Gene"))
+
+
+# View the final dataframe
+head(final_mapped_df)
+
+```
+
+```{r}
+collapsed_mapped_df <- mapped_df %>%
+  # Group by Ensembl IDs
+  dplyr::group_by(ensembl_gene_id) %>%
+  # Collapse the Entrez IDs `mapped_df` into one column named `all_entrez_ids`
+  dplyr::summarize(all_entrez_ids = paste(entrezgene_id, collapse = ";"))
+
+
+collapsed_mapped_df %>%
+  # Filter `collapsed_mapped_df` to include only the rows where
+  # `all_entrez_ids` values include the ";" character --
+  # these are the rows with multiple mapped values
+  dplyr::filter(stringr::str_detect(all_entrez_ids, ";")) %>%
+  # We only need a preview here
+  head()
+```
+
+```{r}
+# Write mapped and annotated data frame to output file
+readr::write_tsv(final_mapped_df, file.path(
+  results_dir,
+  "ERP105973_Gene_Symbols.tsv" # Replace with a relevant output file name
+))
+```
+
+```{r}
+if (!("DESeq2" %in% installed.packages())) {
+  # Install this package if it isn't installed yet
+  BiocManager::install("DESeq2", update = FALSE)
+}
+if (!("EnhancedVolcano" %in% installed.packages())) {
+  # Install this package if it isn't installed yet
+  BiocManager::install("EnhancedVolcano", update = FALSE)
+}
+if (!("apeglm" %in% installed.packages())) {
+  # Install this package if it isn't installed yet
+  BiocManager::install("apeglm", update = FALSE)
+}
+```
+
+```{r}
+# Attach the DESeq2 library
+library(DESeq2)
+
+# Attach the ggplot2 library for plotting
+library(ggplot2)
+
+# We will need this so we can use the pipe: %>%
+library(magrittr)
+library(tidyverse)
+
+
+set.seed(12345)
+
+head(data)
+my_data_df <- as.data.frame(my_data)
+long_format_df <- my_data_df %>%
+  pivot_longer(cols = everything(), names_to = "Gene", values_to = "Expression")
+head(long_format_df)
+
+head(my_data)
+length(my_data)
+head(final_mapped_df)
+
+ddset <- DESeqDataSetFromMatrix(
+  countData = my_data,
+  colData = meta_data,
+  design =~ question
+)
+
+deseq_object <- DESeq(ddset)
+
+deseq_results <- results(deseq_object)
+
+# head(deseq_results)
+
+deseq_results <- lfcShrink(
+  deseq_object, # The original DESeq2 object after running DESeq()
+  coef = 2, # The log fold change coefficient used in DESeq(); the default is 2.
+  res = deseq_results # The original DESeq2 results table
+)
+
+# this is of class DESeqResults -- we want a data frame
+deseq_df <- deseq_results %>%
+  # make into data.frame
+  as.data.frame() %>%
+  # the gene names are row names -- let's make them a column for easy display
+  tibble::rownames_to_column("Gene") %>%
+  # add a column for significance threshold results
+  dplyr::mutate(threshold = padj < 0.05) %>%
+  # sort by statistic -- the highest values will be genes with
+  # higher expression in RPL10 mutated samples
+  dplyr::arrange(dplyr::desc(log2FoldChange))
+
+head(deseq_df)
+
+readr::write_tsv(
+  deseq_df,
+  file.path(
+    results_dir,
+    "ERP105973_diff_expr_results.tsv" # Replace with a relevant output file name
+  )
+)
+```
+
+**Density Plot**
+
+```{r Density Plot}
+# Load necessary libraries
+library(ggplot2)
+library(dplyr)
+
+# Check the size of the expression matrix
+dim(data) 
+
+# Log-scale the data (adding 1 to avoid log(0))
+log_scaled_data <- log(data + 1)
+
+# Calculate per-gene median expression
+gene_medians <- apply(log_scaled_data, 1, median)
+
+# Create a density plot
+density_plot <- ggplot(data.frame(Gene_Medians = gene_medians), aes(x = Gene_Medians)) +
+  geom_density(fill = "blue", alpha = 0.5) +
+  labs(title = "Density Plot of Log-Scaled Gene Medians", x = "Log-Scaled Median Expression", y = "Density") +
+  theme_minimal()
+
+# Display the density plot
+print(density_plot)
+
+#Save the density plot
+ggsave(
+  file.path(plots_dir, "ERP105973_density_plot.png"),
+  plot = density_plot
+)
+
+```
+
+**PCA Plot**
+
+```{r PCA Plot}
+
+# Attach the `DESeq2` library
+library(DESeq2)
+
+# Attach the `ggplot2` library for plotting
+library(ggplot2)
+
+# We will need this so we can use the pipe: %>%
+library(magrittr)
+
+# Set the seed so our results are reproducible:
+set.seed(12345)
+
+# Read in metadata TSV file
+metadata <- readr::read_tsv(metadata_file)
+
+# Read in data TSV file
+expression_df <- readr::read_tsv(data_file) %>%
+  # Tuck away the gene ID column as row names, leaving only numeric values
+  tibble::column_to_rownames("Gene")
+
+# Make the sure the columns (samples) are in the same order as the metadata
+expression_df <- expression_df %>%
+  dplyr::select(metadata$refinebio_accession_code)
+
+# Check if this is in the same order
+all.equal(colnames(expression_df), metadata$refinebio_accession_code)
+
+# convert the columns we will be using for annotation into factors
+metadata <- metadata %>%
+  dplyr::mutate(
+    refinebio_treatment = factor(
+      refinebio_treatment,
+      # specify the possible levels in the order we want them to appear
+      levels = c("enriched", "barren")
+    ),
+  )
+
+# Define a minimum counts cutoff and filter the data to include
+# only rows (genes) that have total counts above the cutoff
+filtered_expression_df <- expression_df %>%
+  dplyr::filter(rowSums(.) >= 10)
+
+# The `DESeqDataSetFromMatrix()` function needs the values to be integers
+filtered_expression_df <- round(filtered_expression_df)
+
+meta_data$question <- ifelse(metadata$refinebio_treatment == "enriched", "enriched", "barren")
+
+# Create a `DESeqDataSet` object
+dds <- DESeqDataSetFromMatrix(
+  countData = filtered_expression_df, # the counts values for all samples in our dataset
+  colData = metadata, # annotation data for the samples in the counts data frame
+  design =~ refinebio_treatment
+)
+
+# Normalize and transform the data in the `DESeqDataSet` object
+# using the `vst()` function from the `DESeq2` R package
+dds_norm_vst <- vst(dds)
+
+# We first have to save the results of the `plotPCA()` function for use with `ggplot2`
+pca_results <-
+  plotPCA(
+    dds_norm_vst,
+    intgroup = c("refinebio_treatment"),
+    returnData = TRUE # This argument tells R to return the PCA values
+  )
+
+# Plot using `ggplot()` function and save to an object
+annotated_pca_plot <- ggplot(
+  pca_results,
+  aes(
+    x = PC1,
+    y = PC2,
+    color = refinebio_treatment,
+  )
+) +
+  # Make a scatter plot
+  geom_point() + ggtitle("PCA Plot")
+
+# display annotated plot
+annotated_pca_plot
+
+# Save plot using `ggsave()` function
+ggsave(
+  file.path(plots_dir, "ERP105973_pca_plot.png"),
+  # Replace with a file name relevant your plotted data
+  plot = annotated_pca_plot # the plot object that we want saved to file
+)
+```
+
+**UMAP Plot**
+
+```{r UMAP Plot}
+if (!("DESeq2" %in% installed.packages())) {
+  # Install DESeq2
+  BiocManager::install("DESeq2", update = FALSE)
+}
+
+if (!("umap" %in% installed.packages())) {
+  # Install umap package
+  BiocManager::install("umap", update = FALSE)
+}
+
+# Libraries
+library(DESeq2)
+library(umap)
+library(ggplot2)
+library(magrittr)
+
+# Set the seed so our results are reproducible:
+set.seed(12345)
+
+# convert the columns we will be using for annotation into factors
+metadata_umap <- metadata %>%
+  dplyr::select( # select only the columns that we will need for plotting
+    refinebio_treatment
+  ) %>%
+  dplyr::mutate( # Now let's convert the annotation variables into factors
+    refinebio_treatment = factor(
+      refinebio_treatment,
+      # specify the possible levels in the order we want them to appear
+      levels = c("enriched", "barren")
+    ),
+  )
+
+dds <- DESeqDataSetFromMatrix(
+  countData = filtered_expression_df, # the counts values for all samples in our dataset
+  colData = metadata, # annotation data for the samples in the counts data frame
+  design =~ refinebio_treatment
+)
+
+# Normalize and transform the data in the `DESeqDataSet` object
+# using the `vst()` function from the `DESeq2` R package
+dds_norm_vst <- vst(dds)
+
+# First we are going to retrieve the normalized data
+# from the `DESeqDataSet` object using the `assay()` function
+normalized_counts <- assay(dds_norm_vst) %>%
+  t() # We need to transpose this data so each row is a sample
+
+# Now perform UMAP on the normalized data
+umap_results <- umap::umap(normalized_counts)
+
+# Make into data frame for plotting with `ggplot2`
+# The UMAP values we need for plotting are stored in the `layout` element
+umap_plot_df <- data.frame(umap_results$layout) %>%
+  # Turn sample IDs stored as row names into a column
+  tibble::rownames_to_column("refinebio_accession_code") %>%
+  # Add the metadata into this data frame; match by sample IDs
+  dplyr::inner_join(metadata, by = "refinebio_accession_code")
+
+umap_plot_df
+
+# Plot using `ggplot()` function
+ggplot(
+  umap_plot_df,
+  aes(
+    x = X1,
+    y = X2,
+    color = refinebio_treatment # label points with different colors for each `subgroup`
+  )
+) +
+  geom_point() # This tells R that we want a scatterplot
+
+# Plot using `ggplot()` function and save to an object
+final_annotated_umap_plot <- ggplot(
+  umap_plot_df,
+  aes(
+    x = X1,
+    y = X2,
+    # plot points with different colors for each `refinebio_treatment` group
+    color = refinebio_treatment,
+  )
+) +
+  geom_point() + 
+  ggtitle("UMAP Plot") + 
+  xlab("UMAP 1") +
+  ylab("UMAP 2")
+
+# Display the plot that we saved above
+final_annotated_umap_plot
+
+ggsave(
+  file.path(
+    plots_dir,
+    "ERP105973_umap_plot.png" # Replace with a good file name for your plot
+  ),
+  plot = final_annotated_umap_plot
+)
+```
+
+**t-SNE Plot**
+
+```{r tSNE Plot}
+library(M3C)
+library(ggplot2)
+
+set.seed(12345)
+tsne_result <- tsne(data,labels = meta_data$refinebio_treatment)
+str(tsne_result)
+
+tsne_coords <- tsne_result$data
+
+tsne_df <- data.frame(tsne_coords, group = meta_data$refinebio_treatment)
+
+# Create the t-SNE plot
+tsne_plot <- ggplot(tsne_df, aes(x = X1, y = X2, color = group)) +
+     geom_point(size = 2) +
+     labs(title = "t-SNE Plot",
+          x = "t-SNE 1",
+          y = "t-SNE 2") +
+     theme_minimal() +
+     theme(legend.title = element_blank())
+
+# Print the plot
+print(tsne_plot)
+
+ggsave("plots/ERP10593_tsne_plot.png", plot = tsne_plot, width = 8, height = 6, dpi = 300)
+
+```
+
+**Volcano Plot**
+
+```{r Volcano Plot}
+if (!("DESeq2" %in% installed.packages())) {
+  # Install this package if it isn't installed yet
+  BiocManager::install("DESeq2", update = FALSE)
+}
+if (!("EnhancedVolcano" %in% installed.packages())) {
+  # Install this package if it isn't installed yet
+  BiocManager::install("EnhancedVolcano", update = FALSE)
+}
+if (!("apeglm" %in% installed.packages())) {
+  # Install this package if it isn't installed yet
+  BiocManager::install("apeglm", update = FALSE)
+}
+
+# Attach the DESeq2 library
+library(DESeq2)
+
+# Attach the ggplot2 library for plotting
+library(ggplot2)
+
+# We will need this so we can use the pipe: %>%
+library(magrittr)
+
+set.seed(12345)
+metadata_volcano <- metadata %>%
+  dplyr::mutate(refinebio_treatment = dplyr::case_when(
+    stringr::str_detect(refinebio_treatment, "enriched") ~ "enriched",
+    stringr::str_detect(refinebio_treatment, "barren") ~ "barren"
+  ))
+
+dplyr::select(metadata_volcano, refinebio_title, refinebio_treatment)
+
+# Print out a preview of `mutation_status`
+str(metadata_volcano$refinebio_treatment)
+
+# Make mutation_status a factor and set the levels appropriately
+metadata <- metadata %>%
+  dplyr::mutate(
+    # Here we define the values our factor variable can have and their order.
+    refinebio_treatment = factor(refinebio_treatment, levels = c("enriched", "barren"))
+  )
+
+# Define a minimum counts cutoff and filter the data to include
+# only rows (genes) that have total counts above the cutoff
+filtered_expression_df <- expression_df %>%
+  dplyr::filter(rowSums(.) >= 10)
+
+# round all expression counts
+gene_matrix <- round(filtered_expression_df)
+
+levels(metadata_volcano$refinebio_treatment)
+
+ddset <- DESeqDataSetFromMatrix(
+  # Here we supply non-normalized count data
+  countData = gene_matrix,
+  # Supply the `colData` with our metadata data frame
+  colData = metadata,
+  # Supply our experimental variable to `design`
+  design = ~refinebio_treatment
+)
+
+deseq_object <- DESeq(ddset)
+
+deseq_results <- results(deseq_object)
+
+deseq_results <- lfcShrink(
+  deseq_object, # The original DESeq2 object after running DESeq()
+  coef = 2, # The log fold change coefficient used in DESeq(); the default is 2.
+  res = deseq_results # The original DESeq2 results table
+)
+
+head(deseq_results)
+
+# this is of class DESeqResults -- we want a data frame
+deseq_df <- deseq_results %>%
+  # make into data.frame
+  as.data.frame() %>%
+  # the gene names are row names -- let's make them a column for easy display
+  tibble::rownames_to_column("Gene") %>%
+  # add a column for significance threshold results
+  dplyr::mutate(threshold = padj < 0.05) %>%
+  # sort by statistic -- the highest values will be genes with
+  # higher expression in RPL10 mutated samples
+  dplyr::arrange(dplyr::desc(log2FoldChange))
+
+head(deseq_df)
+
+readr::write_tsv(
+  deseq_df,
+  file.path(
+    results_dir,
+    "ERP105973_diff_expr_results.tsv" # Replace with a relevant output file name
+  )
+)
+
+# We'll assign this as `volcano_plot`
+volcano_plot <- EnhancedVolcano::EnhancedVolcano(
+  deseq_df,
+  lab = deseq_df$Gene,
+  x = "log2FoldChange",
+  y = "padj",
+  pCutoff = 0.01, # Loosen the cutoff since we supplied corrected p-values
+  xlim = c(-1.5, 1.5), # Adjust the x-axis limits (log2 fold change range)
+  ylim = c(0, -log10(0.01)),
+  col = c("black", "blue", "red"),
+)
+
+volcano_plot
+
+ggsave(
+  plot = volcano_plot,
+  file.path(plots_dir, "ERP105973_volcano_plot.png")
+) # Replace with a plot name relevant to your data
+
+# Sort the results by adjusted p-value and log2FoldChange
+top_degs <- deseq_df %>%
+  dplyr::arrange(padj, desc(log2FoldChange)) %>%
+  dplyr::slice_head(n = 50)  # Get the top 50
+
+# View the top 50 DEGs
+print(top_degs)
+
+write.csv(top_degs, "top_50_degs.csv", row.names = FALSE)
+```
+
+**Heatmap**
+
+```{r Heatmap}
+# Install ComplexHeatmap if not already installed
+if (!requireNamespace("ComplexHeatmap", quietly = TRUE)) {
+  install.packages("BiocManager")
+  BiocManager::install("ComplexHeatmap")
+}
+
+# Load necessary libraries
+library(ComplexHeatmap)
+library(circlize)
+
+sig_genes <- subset(deseq_results, padj < 0.05)
+
+# Extract the gene names
+significant_gene_names <- rownames(sig_genes)
+
+# Run DESeq to estimate size factors and perform differential expression analysis
+dds <- DESeq(dds)
+
+# Extract normalized counts
+norm_counts <- counts(dds, normalized = TRUE)
+
+# Subset the counts to only include significant genes
+sig_counts <- norm_counts[significant_gene_names, ]
+
+# Convert metadata groupings to a factor for color annotation
+groupings <- as.factor(metadata$refinebio_treatment)
+
+group_colors <- list(group = c("enriched" = "red", "barren" = "blue"))
+
+# Create annotation for the heatmap sidebar
+ha <- HeatmapAnnotation(group = groupings, col = group_colors)
+
+# Generate heatmap
+Heatmap(
+  t(scale(t(sig_counts))),                  
+  name = "Expression",                      
+  top_annotation = ha,                      
+  show_row_names = TRUE,                    
+  show_column_names = FALSE,                
+  cluster_rows = TRUE,                    
+  cluster_columns = TRUE,                   
+  col = colorRamp2(c(-2, 0, 2), c("blue", "white", "red")), 
+  row_names_gp = gpar(fontsize = 6),        
+  column_names_gp = gpar(fontsize = 8)     
+)
+```
+
+**Enrichment Analysis**
+
+```{r Enrichment Analysis}
+# Extract significant differentially expressed genes
+sig_genes <- res[which(res$padj < 0.05), ]
+
+# Load final_mapped_df that contains Ensembl to Entrez mappings
+final_mapped_df <- read.table(results, header = TRUE)
+
+# Check structure of final_mapped_df to ensure column names
+head(final_mapped_df)
+
+sig_genes$ensembl_gene_id <- rownames(sig_genes)
+
+# Merge significant genes with the mapping data
+merged_genes <- merge(as.data.frame(sig_genes), final_mapped_df, 
+                      by.x = "ensembl_gene_id", by.y = "Ensembl", all.x = TRUE)
+
+# Check column names in merged_genes to ensure correct column name for Entrez IDs
+head(merged_genes)
+
+# Extract Entrez Gene IDs
+entrez_gene_list <- merged_genes$first_mapped_entrez_id
+
+# Remove any NAs that might have resulted from unmapped genes
+entrez_gene_list <- na.omit(entrez_gene_list)
+
+# Remove any duplicates
+entrez_gene_list <- unique(entrez_gene_list)
+
+# Inspect the Entrez Gene list
+head(entrez_gene_list)
+
+# Load necessary libraries
+library(clusterProfiler)
+library(org.Ss.eg.db)
+library(DOSE)
+
+# clustProfiler with Gene Ontology
+
+ego <- enrichGO(
+  gene          = entrez_gene_list,  
+  OrgDb         = org.Ss.eg.db,      
+  keyType       = "ENTREZID",        
+  ont           = "BP",              
+  pAdjustMethod = "BH",              
+  pvalueCutoff  = 0.05,              
+  qvalueCutoff  = 0.2,               
+  readable      = TRUE               
+)
+
+head(ego)
+
+# Save the Gene Ontology enrichment results as a table
+go_results <- as.data.frame(ego)
+
+write.csv(go_results, file = "GO_enrichment_results.csv")
+
+```
