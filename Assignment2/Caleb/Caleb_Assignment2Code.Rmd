@@ -1,0 +1,543 @@
+---
+title: "Caleb_Assignment2Code"
+author: "Caleb Losch"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+## CGS4144 Bioinformatics Assignment 2
+
+### 1. Download the expression data and matching metadata from Refine.Bio that you selected in Assignment 1.
+
+-   You should have a matrix of samples by genes expression data
+
+-   If your matrix has Ensembl IDs (e.g. ENSG00000141510) instead of Hugo gene names (e.g. TP53), convert the names to Hugo gene names. Here are some guides:
+
+    -   alexslemonade.github.io/refinebio-examples/03-rnaseq/gene-id-annotation_rnaseq_01_ensembl.html
+
+    -   dbioconductor.org/help/course-materials/2019/BSS2019/05_Annotations.html - org.hs.eg.db
+
+    ```{r}
+    # Create the data folder if it doesn't exist
+    if (!dir.exists("data")) {
+      dir.create("data")
+    }
+
+    # Define the file path to the plots directory
+    plots_dir <- "plots"
+    if (!dir.exists(plots_dir)) {
+      dir.create(plots_dir)
+    }
+
+    # Define the file path to the results directory
+    results_dir <- "results"
+    if (!dir.exists(results_dir)) {
+      dir.create(results_dir)
+    }
+
+    # Create the data directory if it doesn't exist
+    data_dir <- file.path("data", "ERP105973")
+    if (!dir.exists(data_dir)) {
+      dir.create(data_dir, recursive = TRUE)
+    }
+
+    # Declare the file paths to the gene expression matrix and metadata files
+    data_file <- file.path(data_dir, "ERP105973.tsv")
+    metadata_file <- file.path(data_dir, "metadata_ERP105973.tsv")
+
+    # Debugging: print the paths to confirm they are correct
+    cat("Data file path:", data_file, "\n")
+    cat("Metadata file path:", metadata_file, "\n")
+
+    # Check if the files exist (optional, for debugging)
+    if (!file.exists(data_file)) {
+      stop("Data file not found: ", data_file)
+    }
+
+    if (!file.exists(metadata_file)) {
+      stop("Metadata file not found: ", metadata_file)
+    }
+
+    # Install the Sus scrofa package
+    if (!("org.Ss.eg.db" %in% installed.packages())) {
+      BiocManager::install("org.Ss.eg.db", update = FALSE)
+    }
+
+    # Attach the library
+    library(org.Ss.eg.db)
+    library(magrittr)
+
+    # Read in metadata TSV file
+    metadata <- readr::read_tsv(metadata_file)
+
+    # Read in data TSV file
+    expression_df <- readr::read_tsv(data_file) %>%
+      tibble::column_to_rownames("Gene")
+
+    # Make the data in the order of the metadata
+    expression_df <- expression_df %>%
+      dplyr::select(metadata$refinebio_accession_code)
+
+    # Check if this is in the same order
+    all.equal(colnames(expression_df), metadata$refinebio_accession_code)
+
+    expression_df <- expression_df %>%
+      tibble::rownames_to_column("Gene")
+
+    # Connect to the Ensembl database for Sus scrofa
+    mart <- useMart("ensembl", dataset = "sscrofa_gene_ensembl")
+
+    # Map Ensembl gene IDs to gene symbols
+    mapped_list <- getBM(
+      filters = "ensembl_gene_id",
+      attributes = c("ensembl_gene_id", "external_gene_name"),
+      values = expression_df$Gene,
+      mart = mart
+    )
+
+    # Merge the results with your expression data (if necessary)
+    merged_data <- merge(expression_df, mapped_list, by.x = "Gene", by.y = "ensembl_gene_id", all.x = TRUE)
+
+    # Reorder columns: move 'external_gene_name' next to 'Gene'
+    merged_data <- merged_data[, c("Gene", "external_gene_name", setdiff(names(merged_data), c("Gene", "external_gene_name")))]
+
+    summary(as.factor(merged_data$external_gene_name), maxsum = 10)
+
+    final_mapped_df <- merged_data
+
+    # Write mapped and annotated data frame to output file
+    readr::write_tsv(final_mapped_df, file.path(
+      results_dir,
+      "ERP105973_Symbols.tsv" # Replace with a relevant output file name
+    ))
+    ```
+
+-   Load the data into your chosen programming language (R or python recommended). What size is your expression matrix? How many genes does it include? How much variation do you see in the data? To answer these questions, log-scale the data, calculate per-gene median expression ranges, then make a density plot showing those results. Summarize your findings.
+
+```{r}
+# 1. Check the dimensions of the expression matrix
+matrix_size <- dim(expression_df)
+cat("The expression matrix has", matrix_size[1], "genes and", matrix_size[2] - 1, "samples.\n")
+
+# 2. Log-scale the expression data (excluding the Gene column)
+log_scaled_df <- merged_data
+log_scaled_df[, 3:ncol(log_scaled_df)] <- log2(merged_data[, 3:ncol(merged_data)] + 1)
+
+# 3. Calculate per-gene median expression ranges
+# Calculate the median expression for each gene (across samples)
+gene_medians <- apply(log_scaled_df[, 3:ncol(log_scaled_df)], 1, median)
+
+# Calculate the range for each gene (difference between max and min)
+gene_ranges <- apply(log_scaled_df[, 3:ncol(log_scaled_df)], 1, function(x) max(x) - min(x))
+
+# Combine gene medians and ranges into a new dataframe
+gene_stats <- data.frame(
+  Gene = log_scaled_df$Gene,
+  external_gene_name = log_scaled_df$external_gene_name,
+  Median = gene_medians,
+  Range = gene_ranges
+)
+
+# 4. Generate a density plot for per-gene median expression ranges
+library(ggplot2)
+
+# Create a density plot of the gene ranges
+density_plot <- ggplot(gene_stats, aes(x = Range)) +
+  geom_density(fill = "blue", alpha = 0.5) +
+  labs(
+    title = "Density Plot of Per-Gene Median Expression Ranges",
+    x = "Median Expression Range",
+    y = "Density"
+  ) +
+  theme_minimal()
+
+# Save the plot to the 'plots' directory
+ggsave(filename = file.path(plots_dir, "gene_expression_range_density_plot.png"), plot = density_plot)
+print(density_plot)
+
+# 5. Summarize findings
+summary(gene_stats$Range)
+cat("The median range of expression across all genes is:", median(gene_stats$Range), "\n")
+cat("The minimum range is:", min(gene_stats$Range), "\n")
+cat("The maximum range is:", max(gene_stats$Range), "\n")
+```
+
+## 2. Now that you have loaded the expression data, generate a PCA plot:
+
+-   You can do this using any PCA implementation. Here is a guide to using the DESeq2 function plotPCA() to generate your plot.
+-   Color your PCA plot by the 2 groups you identified in assignment 1 (e.g., cancer vs normal).
+-   Make sure you include a legend and label the axes!
+
+```{r}
+if (!requireNamespace("DESeq2", quietly = TRUE)) {
+  BiocManager::install("DESeq2")
+}
+if (!requireNamespace("Rtsne", quietly = TRUE)) {
+  install.packages("Rtsne")
+}
+if (!requireNamespace("umap", quietly = TRUE)) {
+  install.packages("umap")
+}
+
+library(DESeq2)
+library(ggplot2)
+library(Rtsne)
+library(umap)
+
+# 1. Log-scale the expression data (excluding the Gene and external_gene_name columns)
+log_scaled_df <- merged_data
+log_scaled_df[, 3:ncol(log_scaled_df)] <- log2(merged_data[, 3:ncol(merged_data)] + 1)
+
+# 2. Identify columns (samples) with zero variance in the log-scaled data (already verified)
+zero_variance_cols <- apply(log_scaled_df[, 3:ncol(log_scaled_df)], 2, function(x) var(x) == 0)
+log_scaled_df_filtered <- log_scaled_df[, !zero_variance_cols]
+
+# 3. Identify rows (genes) with zero variance across samples
+zero_variance_rows <- apply(log_scaled_df_filtered[, 3:ncol(log_scaled_df_filtered)], 1, function(x) var(x) == 0)
+
+# 4. Remove rows (genes) with zero variance
+log_scaled_df_filtered <- log_scaled_df_filtered[!zero_variance_rows, ]
+
+# Check if any rows were removed
+cat("Removed", sum(zero_variance_rows), "genes with zero variance across all samples.\n")
+
+# 5. Perform PCA on filtered log-scaled data
+pca_result <- prcomp(t(log_scaled_df_filtered[, 3:ncol(log_scaled_df_filtered)]), scale. = TRUE)
+
+# 6. Create a data frame for PCA results and include the metadata group information
+pca_data <- as.data.frame(pca_result$x)
+pca_data$Group <- metadata$refinebio_treatment  # Replace 'group' with your actual group column name
+
+# 7. Plot PCA using ggplot2
+pca_plot <- ggplot(pca_data, aes(x = PC1, y = PC2, color = Group)) +
+  geom_point(size = 3) +
+  labs(title = "PCA Plot", x = "PC1", y = "PC2") +
+  theme_minimal()
+
+# 8. Save PCA plot
+ggsave(filename = file.path(plots_dir, "PCA_plot.png"), plot = pca_plot)
+print(pca_plot)
+```
+
+-   Also generate t-SNE and UMAP plots, making sure to color code and label each plot.
+-   t-SNE
+
+```{r}
+# Perform t-SNE
+tsne_result <- Rtsne(t(log_scaled_df_filtered[, 3:ncol(log_scaled_df_filtered)]), perplexity = 10)
+
+# Create a data frame for t-SNE results and include the metadata group information
+tsne_data <- as.data.frame(tsne_result$Y)
+colnames(tsne_data) <- c("Dim1", "Dim2")
+tsne_data$Group <- metadata$refinebio_treatment  # Replace 'group' with your actual group column name
+
+# Plot t-SNE using ggplot2
+tsne_plot <- ggplot(tsne_data, aes(x = Dim1, y = Dim2, color = Group)) +
+  geom_point(size = 3) +
+  labs(title = "t-SNE Plot", x = "Dim1", y = "Dim2") +
+  theme_minimal()
+
+# Save t-SNE plot
+ggsave(filename = file.path(plots_dir, "tSNE_plot.png"), plot = tsne_plot)
+print(tsne_plot)
+```
+
+-   UMAP
+
+```{r}
+# Perform UMAP
+umap_result <- umap(t(log_scaled_df_filtered[, 3:ncol(log_scaled_df_filtered)]))
+
+# Create a data frame for UMAP results and include the metadata group information
+umap_data <- as.data.frame(umap_result$layout)
+colnames(umap_data) <- c("UMAP1", "UMAP2")
+umap_data$Group <- metadata$refinebio_treatment  # Replace 'group' with your actual group column name
+
+# Plot UMAP using ggplot2
+umap_plot <- ggplot(umap_data, aes(x = UMAP1, y = UMAP2, color = Group)) +
+  geom_point(size = 3) +
+  labs(title = "UMAP Plot", x = "UMAP1", y = "UMAP2") +
+  theme_minimal()
+
+# Save UMAP plot
+ggsave(filename = file.path(plots_dir, "UMAP_plot.png"), plot = umap_plot)
+print(umap_plot)
+```
+
+-   Summarize the differences and similarities between your three plots.
+
+### PCA
+
+-   The PCA plot shows that there is a lot of variation between the samples, but there isn't a clear separation between the "barren" and "enriched" groups based on the first two principal components.
+-   Some clustering is present, but the two groups overlap significantly.
+
+### t-SNE
+
+-   The t-SNE plot shows a slightly better separation between the "barren" and "enriched" groups than PCA.
+-   There are visible clusters, but there is still some overlap between the two groups.
+
+### UMAP
+
+-   The UMAP plot is a similar to the t-SNE plot as it shows more visible clusters; however, it shares the intense overlap present in the PCA plot.
+
+## 3. Perform differential analysis on the samples from your two groups
+
+-   A tutorial for this: alexslemonade.github.io/refinebio-examples/03-rnaseq/differential-expression_rnaseq_01.html
+
+```{r}
+if (!("DESeq2" %in% installed.packages())) {
+  # Install this package if it isn't installed yet
+  BiocManager::install("DESeq2", update = FALSE)
+}
+if (!("EnhancedVolcano" %in% installed.packages())) {
+  # Install this package if it isn't installed yet
+  BiocManager::install("EnhancedVolcano", update = FALSE)
+}
+if (!("apeglm" %in% installed.packages())) {
+  # Install this package if it isn't installed yet
+  BiocManager::install("apeglm", update = FALSE)
+}
+
+# Attach the DESeq2 library
+library(DESeq2)
+
+# Attach the ggplot2 library for plotting
+library(ggplot2)
+
+# We will need this so we can use the pipe: %>%
+library(magrittr)
+
+set.seed(12345)
+
+# Read in data TSV file
+expression_df <- readr::read_tsv(data_file) %>%
+  tibble::column_to_rownames("Gene")
+
+# Make the data in the order of the metadata
+expression_df <- expression_df %>%
+  dplyr::select(metadata$refinebio_accession_code)
+
+# Check if this is in the same order
+all.equal(colnames(expression_df), metadata$refinebio_accession_code)
+
+head(metadata$refinebio_treatment)
+
+# Ensure the treatment group is a factor
+metadata <- metadata %>%
+  dplyr::mutate(refinebio_treatment = as.factor(refinebio_treatment))
+
+# Check the levels of the group
+levels(metadata$refinebio_treatment)  # Should show the two groups, like "enriched" and "barren"
+
+# Re-read the expression data from the TSV file
+expression_df <- readr::read_tsv(data_file) %>%
+  tibble::column_to_rownames("Gene")
+
+filtered_expression_df <- expression_df %>%
+  dplyr::filter(rowSums(.) >= 10)
+
+gene_matrix <- round(filtered_expression_df)
+
+# If it contains integers (raw counts), proceed with DESeq2
+dds <- DESeqDataSetFromMatrix(
+  countData = as.matrix(gene_matrix),       # The raw expression count data
+  colData = metadata,                         # The metadata
+  design = ~ refinebio_treatment              # The group comparison design
+)
+
+# Filter out genes with low counts (optional, helps reduce noise)
+dds <- dds[rowSums(counts(dds)) > 10, ]
+
+# Run the DESeq2 analysis
+dds <- DESeq(dds)
+
+# Extract the results for the comparison between "enriched" and "barren"
+results_df <- results(dds, contrast = c("refinebio_treatment", "enriched", "barren"))
+
+head(results_df)
+
+# Sort by adjusted p-value (for top genes)
+results_df <- results_df[order(results_df$padj), ]
+
+plotCounts(dds, gene = "ENSSSCG00000000002", intgroup = "refinebio_treatment")
+
+# Convert the DESeqResults object into a data frame and add additional columns
+deseq_df <- results_df %>%
+  # Convert the DESeqResults object to a regular data frame
+  as.data.frame() %>%
+  # Move row names (genes) to a column named "Gene"
+  tibble::rownames_to_column("Gene") %>%
+  # Add a column for significance threshold (padj < 0.05)
+  dplyr::mutate(threshold = padj < 0.05) %>%
+  # Sort by log2 fold change in descending order
+  dplyr::arrange(dplyr::desc(log2FoldChange))
+
+# Display the first few rows of the new data frame
+head(deseq_df)
+
+# Save the result to a TSV file
+readr::write_tsv(
+  deseq_df,
+  file.path(results_dir, "ERP105973_diff_expr_results.tsv")
+)
+```
+
+-   Create a volcano plot of your data. Make sure to label the axes and provide a legend.
+
+```{r}
+# We'll assign this as `volcano_plot`
+volcano_plot <- EnhancedVolcano::EnhancedVolcano(
+  deseq_df,
+  lab = deseq_df$Gene,
+  x = "log2FoldChange",
+  y = "padj",
+  pCutoff = 0.01 # Loosen the cutoff since we supplied corrected p-values
+)
+print(volcano_plot)
+ggsave(
+  plot = volcano_plot,
+  file.path(plots_dir, "ERP105973_volcano_plot.png")
+)
+```
+
+-   Create a table of the top 50 differentially expressed genes. Add this to your assignment writeup. Include the full table of all results in a results folder in your GitHub repository.
+
+```{r}
+# Extract the top 50 differentially expressed genes by adjusted p-value
+top_50_genes <- head(deseq_df, 50)
+
+# Save the top 50 genes to a TSV file for your write-up
+readr::write_tsv(
+  top_50_genes,
+  file.path(results_dir, "ERP105973_top_50_DE_genes.tsv")
+)
+
+# Display the top 50 genes for review
+head(top_50_genes, 10)  # Show the top 10 genes for review
+```
+
+-   Save and summarize your findings.
+
+#### Volcano Plot
+
+The majority of genes show small fold changes between the two conditions, but a few genes are significantly upregulated or downregulated (far from the center).
+
+#### Top Differentially Expressed Genes
+
+Some genes show significant changes in expression (e.g., ENSSSCG00000031143 and ENSSSCG00000009497), while others, like ENSSSCG00000000002, do not show significant differential expression.
+
+#### Normalized Gene Counts
+
+For some genes, there is no clear visual difference in expression between the two conditions (e.g., ENSSSCG00000000002), consistent with the non-significant p-value.
+
+#### Significant Findings
+
+The table provides a list of the top genes sorted by their fold change and significance, which can guide further biological interpretation and exploration of pathways that may be impacted by environmental enrichment or barren conditions.
+
+## 4. Extract the list of significantly differentially expressed genes, and generate a heatmap showing only those genes
+
+-   Example using ComplexHeatmap. Package reference (<https://jokergoo.github.io/ComplexHeatmap-reference/book/>)
+-   Add a side bar colored by sample groupings (cancer vs not, etc.)
+
+```{r}
+# Install ComplexHeatmap if not already installed
+if (!("ComplexHeatmap" %in% installed.packages())) {
+  BiocManager::install("ComplexHeatmap", update = FALSE)
+}
+
+# Attach the necessary libraries
+library(ComplexHeatmap)
+library(circlize)  # For color scales used by ComplexHeatmap
+library(dplyr)     # For data manipulation
+
+# Extract significantly differentially expressed genes (padj < 0.05)
+sig_genes_df <- deseq_df %>%
+  dplyr::filter(padj < 0.05) %>%
+  dplyr::arrange(padj)  # Sort by adjusted p-value
+
+# Get the list of significantly differentially expressed genes
+sig_genes <- sig_genes_df$Gene
+
+# Filter the expression matrix for only the significant genes
+sig_gene_expression <- expression_df[sig_genes, ]
+
+# Create a factor for the treatment group (enriched vs barren)
+treatment_group <- as.factor(metadata$refinebio_treatment)
+
+# Create a color annotation for the treatment groups
+group_annotation <- HeatmapAnnotation(
+  df = data.frame(Treatment = treatment_group),
+  col = list(Treatment = c("enriched" = "blue", "barren" = "red"))
+)
+
+# Generate the heatmap with the ComplexHeatmap package
+heatmap <- Heatmap(
+  matrix = as.matrix(sig_gene_expression),              # Use the significant gene expression matrix
+  name = "Expression",                                  # Legend title for the heatmap
+  row_names_gp = gpar(fontsize = 10),                   # Font size for gene labels
+  column_names_gp = gpar(fontsize = 10),                # Font size for sample labels
+  show_row_names = TRUE,                                # Show gene names on the heatmap
+  show_column_names = TRUE,                             # Show sample names
+  top_annotation = group_annotation,                    # Add the treatment group annotation
+  col = colorRamp2(c(-2, 0, 2), c("blue", "white", "red")),  # Color scale for expression values
+  cluster_rows = TRUE,                                  # Cluster rows (genes)
+  cluster_columns = TRUE                                # Cluster columns (samples)
+)
+
+# Print the heatmap
+draw(heatmap)
+
+# Alternatively, save as a PDF for higher resolution
+pdf(file.path(plots_dir, "ERP105973_sig_genes_heatmap.pdf"), width = 10, height = 8)
+draw(heatmap)
+dev.off()
+```
+
+## 5. Extract the list of differentially expressed genes and run gene set enrichment analysis. Each student in your team should run a different combination of method and ontology (e.g., if there are 4 students on the team, there should be results for 4 applications in your assignment writeup).
+
+-   Choose a method:
+    -   topGO
+    -   clustProfiler
+    -   gProfiler2 (the one I chose)
+    -   GenomicSuperSignature
+    -   PyDESeq2
+    -   Wilcoxon rank-sum test
+
+```{r}
+# Install gprofiler2 if not already installed
+if (!("gprofiler2" %in% installed.packages())) {
+  install.packages("gprofiler2")
+}
+
+# Load the gprofiler2 library
+library(gprofiler2)
+
+# Extract the significant genes (padj < 0.05) from your differential expression results
+sig_genes <- deseq_df %>%
+  dplyr::filter(padj < 0.05) %>%
+  dplyr::pull(Gene)  # Extract only the gene names
+
+# Run GSEA using gprofiler2 with Gene Ontology (GO) as the selected ontology
+gost_res <- gost(
+  query = sig_genes,                    # List of significant genes
+  organism = "sscrofa",                 # Specify Sus scrofa as the organism (pig)
+  sources = c("GO:BP", "GO:MF", "GO:CC"), # Specify the ontologies you want to analyze (GO:BP, GO:MF, GO:CC)
+  user_threshold = 0.05                 # Adjust p-value threshold if needed
+)
+
+# Check the results
+gost_res$result
+
+# Save the gProfiler results as a TSV file
+readr::write_tsv(
+  gost_res$result,
+  file.path(results_dir, "ERP105973_gProfiler_results.tsv")
+)
+
+# Display the first few rows of the result
+head(gost_res$result)
+
+# Plot the top enrichment results
+gostplot(gost_res, capped = TRUE, interactive = TRUE)
+
+```
