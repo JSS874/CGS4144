@@ -374,46 +374,118 @@ ggplot(clusterings, aes(k, tot.withinss)) +
   geom_line() +
   geom_point()
 ```
+```{r}
+# 10000 Genes
+# Select the top 10 most variable genes
+top_10000_genes <- gene_variances %>%
+  arrange(desc(variance)) %>%
+  slice_head(n = 10000)
+
+# Subset the data to only the top 10000 genes and remove the variance column
+subset_10000_data <- top_10000_genes %>%
+  select(-variance)
+
+# Transpose the data: samples as rows, genes as columns
+transposed_10000_data <- subset_10000_data %>%
+  select(-Gene) %>%
+  as.matrix() %>%
+  t()
+
+#Scale the data (mean = 0, sd = 1)
+scaled_10000_data <- scale(transposed_10000_data)
+
+# Install the tidymodels package if it's not already installed
+if (!requireNamespace("tidymodels", quietly = TRUE)) {
+  install.packages("tidymodels")
+}
+
+library(tidymodels)
+
+set.seed(27)
+
+kclust <- kmeans(scaled_10000_data, centers = 3)
+
+kclusts <- 
+  tibble(k = 1:9) %>%
+  mutate(
+    kclust = map(k, ~kmeans(scaled_10000_data, .x)),
+    tidied = map(kclust, tidy),
+    glanced = map(kclust, glance),
+    augmented = map(kclust, augment, scaled_10000_data)
+  )
+
+kclusts
+
+clusters <- 
+  kclusts %>%
+  unnest(cols = c(tidied))
+
+assignments <- 
+  kclusts %>% 
+  unnest(cols = c(augmented))
+
+clusterings <- 
+  kclusts %>%
+  unnest(cols = c(glanced))
+
+p1 <- 
+  ggplot(assignments, aes(x = X1, y = X2, color = .cluster)) +
+  geom_point(alpha = 0.8) + 
+  facet_wrap(~ k)
+p1
+
+ggplot(clusterings, aes(k, tot.withinss)) +
+  geom_line() +
+  geom_point()
+```
+
 
 ```{r}
 # Generate clusters for different gene sets
 k_10_clusters <- kmeans(scaled_10_data, centers = 3)$cluster
 k_100_clusters <- kmeans(scaled_100_data, centers = 3)$cluster
 k_1000_clusters <- kmeans(scaled_1000_data, centers = 3)$cluster
+k_10000_clusters <- kmeans(scaled_10000_data, centers = 3)$cluster
 k_5000_clusters <- kmeans(scale(transposed_data), centers = 3)$cluster
 
 # Create a contingency table
 contingency_table_10_vs_5000 <- table(k_10_clusters, k_5000_clusters)
 contingency_table_100_vs_5000 <- table(k_100_clusters, k_5000_clusters)
 contingency_table_1000_vs_5000 <- table(k_1000_clusters, k_5000_clusters)
+contingency_table_10000_vs_5000 <- table(k_10000_clusters, k_5000_clusters)
 
 # Perform Chi-squared test
 chi_test_10_vs_5000 <- chisq.test(contingency_table_10_vs_5000)
 chi_test_100_vs_5000 <- chisq.test(contingency_table_100_vs_5000)
 chi_test_1000_vs_5000 <- chisq.test(contingency_table_1000_vs_5000)
+chi_test_10000_vs_5000 <- chisq.test(contingency_table_10000_vs_5000)
 
 # Store the results
 results_table <- tibble(
-  Comparison = c("10 vs 5000 Genes", "100 vs 5000 Genes", "1000 vs 5000 Genes"),
+  Comparison = c("10 vs 5000 Genes", "100 vs 5000 Genes", "1000 vs 5000 Genes", "10000 vs 5000 Genes"),
   Chi_Square_Statistic = c(
     chi_test_10_vs_5000$statistic, 
     chi_test_100_vs_5000$statistic, 
-    chi_test_1000_vs_5000$statistic
+    chi_test_1000_vs_5000$statistic,
+    chi_test_10000_vs_5000$statistic
   ),
   p_value = c(
     chi_test_10_vs_5000$p.value, 
     chi_test_100_vs_5000$p.value, 
-    chi_test_1000_vs_5000$p.value
+    chi_test_1000_vs_5000$p.value,
+    chi_test_10000_vs_5000$p.value
   ),
   Adjusted_p_value = p.adjust(c(
     chi_test_10_vs_5000$p.value, 
     chi_test_100_vs_5000$p.value, 
-    chi_test_1000_vs_5000$p.value
+    chi_test_1000_vs_5000$p.value,
+    chi_test_10000_vs_5000$p.value
 ), method = "BH"),
   Significant = p.adjust(c(
     chi_test_10_vs_5000$p.value, 
     chi_test_100_vs_5000$p.value, 
-    chi_test_1000_vs_5000$p.value
+    chi_test_1000_vs_5000$p.value,
+    chi_test_10000_vs_5000$p.value
   ), method = "BH") < 0.05
 )
 
@@ -439,13 +511,14 @@ all_clusters <- tibble(
   `10 Genes` = as.factor(k_10_clusters),
   `100 Genes` = as.factor(k_100_clusters),
   `1000 Genes` = as.factor(k_1000_clusters),
-  `5000 Genes` = as.factor(k_5000_clusters)
+  `5000 Genes` = as.factor(k_5000_clusters),
+  `10000 Genes` = as.factor(k_10000_clusters)
 )
 
 # Convert the data into long format for the alluvial plot
 alluvial_data <- all_clusters %>%
   pivot_longer(
-    cols = c(`10 Genes`, `100 Genes`, `1000 Genes`, `5000 Genes`),
+    cols = c(`10 Genes`, `100 Genes`, `1000 Genes`, `5000 Genes`,`10000 Genes` ),
     names_to = "Clustering",
     values_to = "Cluster"
   )
