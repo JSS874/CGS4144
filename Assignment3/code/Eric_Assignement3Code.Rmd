@@ -1,0 +1,621 @@
+```{r}
+# Create the data folder if it doesn't exist
+if (!dir.exists("data")) {
+  dir.create("data")
+}
+
+# Define the file path to the plots directory
+plots_dir <- "plots"
+
+# Create the plots folder if it doesn't exist
+if (!dir.exists(plots_dir)) {
+  dir.create(plots_dir)
+}
+
+# Define the file path to the results directory
+results_dir <- "results"
+
+# Create the results folder if it doesn't exist
+if (!dir.exists(results_dir)) {
+  dir.create(results_dir)
+}
+```
+
+
+```{r}
+# Define the file path to the data directory
+# Replace with the path of the folder the files will be in
+data_dir <- file.path("data", "ERP105973")
+
+# Declare the file path to the gene expression matrix file
+# inside directory saved as `data_dir`
+# Replace with the path to your dataset file
+data_file <- file.path(data_dir, "ERP105973.tsv")
+
+# Declare the file path to the metadata file
+# inside the directory saved as `data_dir`
+# Replace with the path to your metadata file
+metadata_file <- file.path(data_dir, "metadata_ERP105973.tsv")
+```
+
+```{r}
+# Check if the gene expression matrix file is at the path stored in `data_file`
+file.exists(data_file)
+
+# Check if the metadata file is at the file path stored in `metadata_file`
+file.exists(metadata_file)
+```
+
+```{r}
+# Load BiocManager if it's not already installed
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+# Install the mouse annotation package
+if (!("org.Ss.eg.db" %in% installed.packages())) {
+  # Install this package if it isn't installed yet
+  BiocManager::install("org.Ss.eg.db", update = FALSE)
+}
+```
+
+```{r}
+# Attach the library
+library(org.Ss.eg.db)
+
+# We will need this so we can use the pipe: %>%
+library(magrittr)
+```
+
+```{r}
+# Read in metadata TSV file
+metadata <- readr::read_tsv(metadata_file)
+
+# Read in data TSV file
+expression_df <- readr::read_tsv(data_file) %>%
+  # Tuck away the Gene ID column as row names
+  tibble::column_to_rownames("Gene")
+
+# Make the data in the order of the metadata
+expression_df <- expression_df %>%
+  dplyr::select(metadata$refinebio_accession_code)
+
+# Check if this is in the same order
+all.equal(colnames(expression_df), metadata$refinebio_accession_code)
+
+# Bring back the "Gene" column in preparation for mapping
+expression_df <- expression_df %>%
+  tibble::rownames_to_column("Gene")
+
+head(expression_df)
+```
+
+```{r}
+library(dplyr)
+
+# Calculate variance for each gene across samples (excluding the 'Gene' column)
+gene_variances <- expression_df %>%
+  rowwise() %>%
+  mutate(variance = var(c_across(starts_with("ERR")), na.rm = TRUE)) %>%
+  ungroup()
+
+# Select the top 5,000 most variable genes
+top_genes <- gene_variances %>%
+  arrange(desc(variance)) %>%
+  slice_head(n = 5000)
+
+# Subset the data to only the top 5,000 genes and remove the variance column
+subset_data <- top_genes %>%
+  select(-variance)
+
+# Transpose the data: samples as rows, genes as columns
+transposed_data <- subset_data %>%
+  select(-Gene) %>%
+  as.matrix() %>%
+  t()
+
+#Scale the data (mean = 0, sd = 1)
+scaled_data <- scale(transposed_data)
+
+
+```
+
+
+```{r}
+# K Means Clustering
+
+# Install the tidymodels package if it's not already installed
+if (!requireNamespace("tidymodels", quietly = TRUE)) {
+  install.packages("tidymodels")
+}
+
+library(tidymodels)
+
+set.seed(27)
+```
+
+```{r}
+kclust <- kmeans(scaled_data, centers = 3)
+# kclust
+# summary(kclust)
+# augment(kclust, scaled_data)
+# tidy(kclust)
+# glance(kclust)
+```
+
+```{r}
+kclusts <- 
+  tibble(k = 1:9) %>%
+  mutate(
+    kclust = map(k, ~kmeans(scaled_data, .x)),
+    tidied = map(kclust, tidy),
+    glanced = map(kclust, glance),
+    augmented = map(kclust, augment, scaled_data)
+  )
+
+kclusts
+
+clusters <- 
+  kclusts %>%
+  unnest(cols = c(tidied))
+
+assignments <- 
+  kclusts %>% 
+  unnest(cols = c(augmented))
+
+clusterings <- 
+  kclusts %>%
+  unnest(cols = c(glanced))
+
+p1 <- 
+  ggplot(assignments, aes(x = X1, y = X2, color = .cluster)) +
+  geom_point(alpha = 0.8) + 
+  facet_wrap(~ k)
+p1
+```
+
+```{r}
+ggplot(clusterings, aes(k, tot.withinss)) +
+  geom_line() +
+  geom_point()
+```
+
+```{r}
+# 10 Genes
+# Select the top 10 most variable genes
+top_10_genes <- gene_variances %>%
+  arrange(desc(variance)) %>%
+  slice_head(n = 10)
+
+# Subset the data to only the top 10 genes and remove the variance column
+subset_10_data <- top_10_genes %>%
+  select(-variance)
+
+# Transpose the data: samples as rows, genes as columns
+transposed_10_data <- subset_10_data %>%
+  select(-Gene) %>%
+  as.matrix() %>%
+  t()
+
+#Scale the data (mean = 0, sd = 1)
+scaled_10_data <- scale(transposed_10_data)
+
+# Install the tidymodels package if it's not already installed
+if (!requireNamespace("tidymodels", quietly = TRUE)) {
+  install.packages("tidymodels")
+}
+
+library(tidymodels)
+
+set.seed(27)
+
+kclust <- kmeans(scaled_10_data, centers = 3)
+
+kclusts <- 
+  tibble(k = 1:9) %>%
+  mutate(
+    kclust = map(k, ~kmeans(scaled_10_data, .x)),
+    tidied = map(kclust, tidy),
+    glanced = map(kclust, glance),
+    augmented = map(kclust, augment, scaled_10_data)
+  )
+
+kclusts
+
+clusters <- 
+  kclusts %>%
+  unnest(cols = c(tidied))
+
+assignments <- 
+  kclusts %>% 
+  unnest(cols = c(augmented))
+
+clusterings <- 
+  kclusts %>%
+  unnest(cols = c(glanced))
+
+p1 <- 
+  ggplot(assignments, aes(x = X1, y = X2, color = .cluster)) +
+  geom_point(alpha = 0.8) + 
+  facet_wrap(~ k)
+p1
+
+ggplot(clusterings, aes(k, tot.withinss)) +
+  geom_line() +
+  geom_point()
+```
+
+
+```{r}
+# 100 Genes
+# Select the top 100 most variable genes
+top_100_genes <- gene_variances %>%
+  arrange(desc(variance)) %>%
+  slice_head(n = 100)
+
+# Subset the data to only the top 100 genes and remove the variance column
+subset_100_data <- top_100_genes %>%
+  select(-variance)
+
+# Transpose the data: samples as rows, genes as columns
+transposed_100_data <- subset_100_data %>%
+  select(-Gene) %>%
+  as.matrix() %>%
+  t()
+
+#Scale the data (mean = 0, sd = 1)
+scaled_100_data <- scale(transposed_100_data)
+
+# Install the tidymodels package if it's not already installed
+if (!requireNamespace("tidymodels", quietly = TRUE)) {
+  install.packages("tidymodels")
+}
+
+library(tidymodels)
+
+set.seed(27)
+
+kclust <- kmeans(scaled_100_data, centers = 3)
+
+kclusts <- 
+  tibble(k = 1:9) %>%
+  mutate(
+    kclust = map(k, ~kmeans(scaled_100_data, .x)),
+    tidied = map(kclust, tidy),
+    glanced = map(kclust, glance),
+    augmented = map(kclust, augment, scaled_100_data)
+  )
+
+kclusts
+
+clusters <- 
+  kclusts %>%
+  unnest(cols = c(tidied))
+
+assignments <- 
+  kclusts %>% 
+  unnest(cols = c(augmented))
+
+clusterings <- 
+  kclusts %>%
+  unnest(cols = c(glanced))
+
+p1 <- 
+  ggplot(assignments, aes(x = X1, y = X2, color = .cluster)) +
+  geom_point(alpha = 0.8) + 
+  facet_wrap(~ k)
+p1
+
+ggplot(clusterings, aes(k, tot.withinss)) +
+  geom_line() +
+  geom_point()
+```
+
+```{r}
+# 1000 Genes
+# Select the top 10 most variable genes
+top_1000_genes <- gene_variances %>%
+  arrange(desc(variance)) %>%
+  slice_head(n = 1000)
+
+# Subset the data to only the top 1000 genes and remove the variance column
+subset_1000_data <- top_1000_genes %>%
+  select(-variance)
+
+# Transpose the data: samples as rows, genes as columns
+transposed_1000_data <- subset_1000_data %>%
+  select(-Gene) %>%
+  as.matrix() %>%
+  t()
+
+#Scale the data (mean = 0, sd = 1)
+scaled_1000_data <- scale(transposed_1000_data)
+
+# Install the tidymodels package if it's not already installed
+if (!requireNamespace("tidymodels", quietly = TRUE)) {
+  install.packages("tidymodels")
+}
+
+library(tidymodels)
+
+set.seed(27)
+
+kclust <- kmeans(scaled_1000_data, centers = 3)
+
+kclusts <- 
+  tibble(k = 1:9) %>%
+  mutate(
+    kclust = map(k, ~kmeans(scaled_1000_data, .x)),
+    tidied = map(kclust, tidy),
+    glanced = map(kclust, glance),
+    augmented = map(kclust, augment, scaled_1000_data)
+  )
+
+kclusts
+
+clusters <- 
+  kclusts %>%
+  unnest(cols = c(tidied))
+
+assignments <- 
+  kclusts %>% 
+  unnest(cols = c(augmented))
+
+clusterings <- 
+  kclusts %>%
+  unnest(cols = c(glanced))
+
+p1 <- 
+  ggplot(assignments, aes(x = X1, y = X2, color = .cluster)) +
+  geom_point(alpha = 0.8) + 
+  facet_wrap(~ k)
+p1
+
+ggplot(clusterings, aes(k, tot.withinss)) +
+  geom_line() +
+  geom_point()
+```
+
+```{r}
+# Generate clusters for different gene sets
+k_10_clusters <- kmeans(scaled_10_data, centers = 3)$cluster
+k_100_clusters <- kmeans(scaled_100_data, centers = 3)$cluster
+k_1000_clusters <- kmeans(scaled_1000_data, centers = 3)$cluster
+k_5000_clusters <- kmeans(scale(transposed_data), centers = 3)$cluster
+
+# Create a contingency table
+contingency_table_10_vs_5000 <- table(k_10_clusters, k_5000_clusters)
+contingency_table_100_vs_5000 <- table(k_100_clusters, k_5000_clusters)
+contingency_table_1000_vs_5000 <- table(k_1000_clusters, k_5000_clusters)
+
+# Perform Chi-squared test
+chi_test_10_vs_5000 <- chisq.test(contingency_table_10_vs_5000)
+chi_test_100_vs_5000 <- chisq.test(contingency_table_100_vs_5000)
+chi_test_1000_vs_5000 <- chisq.test(contingency_table_1000_vs_5000)
+
+# Store the results
+results_table <- tibble(
+  Comparison = c("10 vs 5000 Genes", "100 vs 5000 Genes", "1000 vs 5000 Genes"),
+  Chi_Square_Statistic = c(
+    chi_test_10_vs_5000$statistic, 
+    chi_test_100_vs_5000$statistic, 
+    chi_test_1000_vs_5000$statistic
+  ),
+  p_value = c(
+    chi_test_10_vs_5000$p.value, 
+    chi_test_100_vs_5000$p.value, 
+    chi_test_1000_vs_5000$p.value
+  ),
+  Adjusted_p_value = p.adjust(c(
+    chi_test_10_vs_5000$p.value, 
+    chi_test_100_vs_5000$p.value, 
+    chi_test_1000_vs_5000$p.value
+), method = "BH"),
+  Significant = p.adjust(c(
+    chi_test_10_vs_5000$p.value, 
+    chi_test_100_vs_5000$p.value, 
+    chi_test_1000_vs_5000$p.value
+  ), method = "BH") < 0.05
+)
+
+print(results_table)
+write.csv(results_table, "chi_test_results.csv", row.names = FALSE)
+
+```
+
+```{r}
+# Install ggalluvial if not installed
+if (!requireNamespace("ggalluvial", quietly = TRUE)) {
+  install.packages("ggalluvial")
+}
+
+library(ggplot2)
+library(ggalluvial)
+library(tibble)
+
+
+# Create a tibble with all clustering assignments for each sample
+all_clusters <- tibble(
+  Sample = 1:length(k_10_clusters),
+  `10 Genes` = as.factor(k_10_clusters),
+  `100 Genes` = as.factor(k_100_clusters),
+  `1000 Genes` = as.factor(k_1000_clusters),
+  `5000 Genes` = as.factor(k_5000_clusters)
+)
+
+# Convert the data into long format for the alluvial plot
+alluvial_data <- all_clusters %>%
+  pivot_longer(
+    cols = c(`10 Genes`, `100 Genes`, `1000 Genes`, `5000 Genes`),
+    names_to = "Clustering",
+    values_to = "Cluster"
+  )
+
+
+# Generate the alluvial plot
+ggplot(alluvial_data,
+       aes(x = Clustering, stratum = Cluster, alluvium = Sample,
+           fill = Cluster, label = Cluster)) +
+  geom_flow(stat = "alluvium", lode.guidance = "rightleft", alpha = 0.7) +
+  geom_stratum(alpha = 0.8) +
+  geom_text(stat = "stratum", size = 3) +
+  theme_minimal() +
+  labs(
+    title = "Alluvial Diagram of Clustering Results",
+    x = "Clustering Setup",
+    y = "Number of Samples",
+    fill = "Cluster"
+  ) +
+  theme(legend.position = "bottom")
+
+```
+
+```{r}
+# Convert cluster assignments to a dataframe
+kmeans_clusters <- data.frame(
+  SampleID = names(kclust$cluster),  # Sample IDs as row names
+  KMeans = kclust$cluster            # Corresponding cluster labels
+)
+
+# Save the results to a CSV file
+write.csv(kmeans_clusters, "kmeans_results.csv", row.names = FALSE)
+
+# Read in groups results
+pam_clusters <- read.csv("pam_clustering_results_k3.csv")
+pam_clusters <- pam_clusters %>%
+  rename(PAM = Cluster)
+
+spectral_clusters <- read.csv("grant, a. spectral_results.csv")
+spectral_clusters <- spectral_clusters %>%
+  rename(SampleID = sample)
+spectral_clusters <- spectral_clusters %>%
+  rename(Spectral = cluster)
+
+h_clusters <- read.csv("spitulnik,hcluster_results.csv")
+h_clusters <- h_clusters %>%
+  rename(SampleID = sampleId)
+h_clusters <- h_clusters %>%
+  rename(Hierarchical = cluster)
+
+prop_clusters <- read.csv("propagation.csv")
+prop_clusters <- prop_clusters %>%
+  rename(SampleID = 1)
+prop_clusters <- prop_clusters %>%
+  rename(Propagation = Cluster)
+print(prop_clusters)
+
+# Merge all results
+all_clusters <- reduce(
+  list(kmeans_clusters, pam_clusters, spectral_clusters, h_clusters, prop_clusters), 
+  by = "SampleID", 
+  .f = full_join
+)
+
+clusters_with_treatment <- all_clusters %>%
+  left_join(metadata %>% select(refinebio_accession_code, refinebio_treatment), 
+            by = c("SampleID" = "refinebio_accession_code"))
+
+# View the result
+print(clusters_with_treatment)
+```
+
+```{r}
+library(ComplexHeatmap)
+library(circlize)
+library(dplyr)
+
+# Prepare annotations for clusters and treatment conditions
+ha <- HeatmapAnnotation(
+  KMeans = as.factor(clusters_with_treatment$KMeans),
+  PAM = as.factor(clusters_with_treatment$PAM),
+  Spectral = as.factor(clusters_with_treatment$Spectral),
+  Hierarchical = as.factor(clusters_with_treatment$Hierarchical),
+  Propagation = as.factor(clusters_with_treatment$Propagation),
+  Treatment = as.factor(clusters_with_treatment$refinebio_treatment),
+  col = list(KMeans = c("1" = "red", "2" = "blue", "3" = "green"),
+             PAM = c("1" = "orange", "2" = "purple", "3" = "yellow"),
+             Spectral = c("1" = "cyan", "2" = "pink", "3" = "brown"),
+             Hierarchical = c("1" = "blue", "2" = "darkred", "3" = "violet"),
+             Propagation = c(
+      "0" = "gray", "1" = "lightblue", "2" = "darkgreen", "3" = "purple", 
+      "4" = "brown", "5" = "pink", "6" = "yellow", "7" = "orange", 
+      "8" = "cyan", "9" = "darkred", "10" = "lightgreen", "11" = "navy", 
+      "12" = "black", "13" = "magenta", "14" = "green"
+    ),
+             Treatment = c("enriched" = "darkgreen", "barren" = "darkblue"))
+)
+
+# Convert top_genes to a matrix
+top_genes_matrix <- as.matrix(top_genes)
+
+# Convert the data to a numeric matrix, excluding the first column (Gene IDs)
+gene_expression_matrix <- top_genes_matrix[, -1]  # Remove gene ID column
+gene_expression_matrix <- apply(gene_expression_matrix, 2, as.numeric)  # Convert to numeric
+
+# Set row names (gene IDs) back to the matrix
+rownames(gene_expression_matrix) <- top_genes_matrix[, 1]
+
+# Align samples to ensure that the columns match those in clusters_with_treatment
+valid_sample_ids <- clusters_with_treatment$SampleID
+gene_expression_matrix <- gene_expression_matrix[, colnames(gene_expression_matrix) %in% valid_sample_ids]
+
+# Create the heatmap
+heatmap <- Heatmap(
+  gene_expression_matrix,                         
+  name = "Expression",                            
+  top_annotation = ha,                            
+  show_row_dend = TRUE,                           
+  show_column_dend = TRUE,                        
+  row_title = "Genes",                            
+  column_title = "Samples",                      
+  cluster_rows = TRUE,                            
+  cluster_columns = TRUE,                         
+  show_column_names = FALSE,   
+  show_row_names = TRUE,
+  heatmap_legend_param = list(title = "Expression") 
+)
+
+# Draw the heatmap
+draw(heatmap)
+
+
+```
+
+```{r}
+# Initialize an empty list to store results
+chi_squared_results <- list()
+
+# Define the clustering methods to test
+clustering_methods <- c("KMeans", "PAM", "Spectral", "Hierarchical", "Propagation")
+
+# Perform Chi-squared tests for each clustering method
+for (method in clustering_methods) {
+  # Create a contingency table
+  contingency_table <- table(clusters_with_treatment[[method]], clusters_with_treatment$refinebio_treatment)
+  
+  # Perform Chi-squared test
+  chi_squared_test <- chisq.test(contingency_table)
+  
+  # Store results
+  chi_squared_results[[method]] <- data.frame(
+    Chi_Square_Statistic = chi_squared_test$statistic,
+    p_value = chi_squared_test$p.value
+  )
+}
+
+# Convert the list to a data frame
+chi_squared_results_df <- do.call(rbind, chi_squared_results)
+
+# Calculate adjusted p-values using the original p-values
+adjusted_p_values <- p.adjust(chi_squared_results_df$p_value, method = "BH")
+
+# Add the adjusted p-values as a new column
+chi_squared_results_df$Adjusted_p_value <- adjusted_p_values
+
+chi_squared_results_df$Significant <- adjusted_p_values < 0.05
+
+# View the results
+print(chi_squared_results_df)
+write.csv(chi_squared_results_df, "chi_cluster_results.csv", row.names = TRUE)
+
+```
+
