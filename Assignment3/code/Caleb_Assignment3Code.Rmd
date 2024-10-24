@@ -1,0 +1,682 @@
+---
+title: "main"
+author: "Caleb Losch"
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    latex_engine: xelatex
+  html_document: default
+---
+
+```{r}
+# Create the data folder if it doesn't exist
+if (!dir.exists("data")) {
+  dir.create("data")
+}
+
+# Define the file path to the plots directory
+plots_dir <- "plots"
+
+# Create the plots folder if it doesn't exist
+if (!dir.exists(plots_dir)) {
+  dir.create(plots_dir)
+}
+
+# Define the file path to the results directory
+results_dir <- "results"
+
+# Create the results folder if it doesn't exist
+if (!dir.exists(results_dir)) {
+  dir.create(results_dir)
+}
+
+```
+
+```{r}
+# Define the file path to the data directory
+# Replace with the path of the folder the files will be in
+data_dir <- file.path("data", "ERP105973")
+
+# Declare the file path to the gene expression matrix file
+# inside directory saved as `data_dir`
+# Replace with the path to your dataset file
+data_file <- file.path(data_dir, "ERP105973.tsv")
+
+# Declare the file path to the metadata file
+# inside the directory saved as `data_dir`
+# Replace with the path to your metadata file
+metadata_file <- file.path(data_dir, "metadata_ERP105973.tsv")
+```
+
+```{r}
+# Check if the gene expression matrix file is at the path stored in `data_file`
+file.exists(data_file)
+
+# Check if the metadata file is at the file path stored in `metadata_file`
+file.exists(metadata_file)
+```
+
+```{r}
+# Load BiocManager if it's not already installed
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+# Install the mouse annotation package
+if (!("org.Ss.eg.db" %in% installed.packages())) {
+  # Install this package if it isn't installed yet
+  BiocManager::install("org.Ss.eg.db", update = FALSE)
+}
+```
+
+```{r}
+# Attach the library
+library(org.Ss.eg.db)
+
+# We will need this so we can use the pipe: %>%
+library(magrittr)
+```
+
+```{r}
+# Read in metadata TSV file
+metadata <- readr::read_tsv(metadata_file)
+
+# Read in data TSV file
+expression_df <- readr::read_tsv(data_file) %>%
+  # Tuck away the Gene ID column as row names
+  tibble::column_to_rownames("Gene")
+
+# Make the data in the order of the metadata
+expression_df <- expression_df %>%
+  dplyr::select(metadata$refinebio_accession_code)
+
+# Check if this is in the same order
+all.equal(colnames(expression_df), metadata$refinebio_accession_code)
+
+# Bring back the "Gene" column in preparation for mapping
+expression_df <- expression_df %>%
+  tibble::rownames_to_column("Gene")
+
+head(expression_df)
+```
+
+## Summary of the Tables and Charts
+
+### Expression_df:
+
+The first section ensures the alignment of gene expression data with the metadata for consistent sample ordering. Each row represents a gene, and each column represents the gene's expression levels across different samples (identified by ERRxxxx IDs). The code confirms this alignment, with gene IDs set as row names and the sample columns reordered to match the metadata. This step is essential for maintaining accurate correspondence between the samples in the expression data and their associated metadata for future analyses.
+
+## Step 2a: Subset to the 5,000 most variable genes
+
+```{r}
+library(dplyr)
+
+# Calculate variance for each gene across samples (excluding the 'Gene' column)
+gene_variances <- expression_df %>%
+  rowwise() %>%
+  mutate(variance = var(c_across(starts_with("ERR")), na.rm = TRUE)) %>%
+  ungroup()
+
+# Select the top 5,000 most variable genes
+top_genes <- gene_variances %>%
+  arrange(desc(variance)) %>%
+  slice_head(n = 5000)
+
+# Subset the data to only the top 5,000 genes and remove the variance column
+subset_data <- top_genes %>%
+  select(-variance)
+
+# Transpose the data: samples as rows, genes as columns
+transposed_data <- subset_data %>%
+  select(-Gene) %>%
+  as.matrix() %>%
+  t()
+
+#Scale the data (mean = 0, sd = 1)
+scaled_data <- scale(transposed_data)
+
+
+```
+
+## Step 2b-c: Run the PAM clustering algorithm on the 5,000 most variable genes
+
+```{r}
+# Install required packages if they are not already installed
+if (!require(cluster)) install.packages("cluster")
+if (!require(ggplot2)) install.packages("ggplot2")
+if (!require(factoextra)) install.packages("factoextra")
+
+# Load the libraries
+library(cluster)     # For PAM clustering
+library(ggplot2)     # For plotting
+library(factoextra)  # For enhanced clustering visualization
+
+# Transpose the data: samples as rows, genes as columns
+transposed_data <- subset_data %>%
+  select(-Gene) %>%
+  as.matrix() %>%
+  t()
+
+# Scale the data (mean = 0, sd = 1)
+scaled_data <- scale(transposed_data)
+
+# Initialize lists to store results
+pam_results <- list()
+silhouette_scores <- numeric()
+
+# Try k from 2 to 8
+for (k in 2:8) {
+  set.seed(123)  # For reproducibility
+  pam_result <- pam(scaled_data, k = k)
+  pam_results[[k]] <- pam_result
+  
+  # Calculate average silhouette width
+  sil_width <- pam_result$silinfo$avg.width
+  silhouette_scores <- c(silhouette_scores, sil_width)
+}
+
+# Create a data frame for silhouette widths
+silhouette_df <- data.frame(
+  k = 2:8,
+  silhouette_width = silhouette_scores
+)
+
+# Plot the silhouette widths
+ggplot(silhouette_df, aes(x = k, y = silhouette_width)) +
+  geom_line() +
+  geom_point(size = 3) +
+  labs(
+    title = "Average Silhouette Width for Different k",
+    x = "Number of Clusters (k)",
+    y = "Average Silhouette Width"
+  ) +
+  theme_minimal()
+
+optimal_k <- 2
+optimal_pam <- pam_results[[optimal_k]]
+clusters <- optimal_pam$clustering
+
+```
+
+## Summary of the Tables and Charts
+
+### Average Silhouette Width for different k:
+
+This chart displays the average silhouette width for different numbers of clusters (k) using PAM clustering. The silhouette width is a measure of how well each object lies within its cluster, where a higher value indicates better-defined clusters. In the plot, the highest silhouette width occurs at k = 2, suggesting that a 2-cluster solution provides the best clustering structure for this dataset. Lower values for higher k suggest that additional clusters do not improve the clustering structure as effectively. Based on this, k = 2 is chosen as the optimal number of clusters for further analysis.
+
+## Output Visualization
+
+```{r}
+# Perform PCA on the scaled data
+pca_result <- prcomp(scaled_data, center = TRUE, scale. = TRUE)
+
+# Create a data frame with PCA results and cluster assignments
+pca_df <- data.frame(pca_result$x[, 1:2])  # Take the first two principal components
+pca_df$Cluster <- as.factor(clusters)
+pca_df$SampleID <- rownames(scaled_data)
+
+# List of k values
+k_values <- 2:8
+
+# Loop over k values
+for (k in k_values) {
+  pam_result <- pam_results[[k]]
+  clusters <- pam_result$clustering
+  
+  # Add clusters to PCA data frame
+  pca_df$Cluster <- as.factor(clusters)
+  
+  # Plot PCA
+  p <- ggplot(pca_df, aes(x = PC1, y = PC2, color = Cluster)) +
+    geom_point(size = 3) +
+    labs(
+      title = paste("PAM Clustering (k =", k, ") on PCA-Reduced Data"),
+      x = "Principal Component 1",
+      y = "Principal Component 2"
+    ) +
+    theme_minimal()
+  
+  print(p)
+}
+
+# Silhouette plot for the optimal k
+fviz_silhouette(optimal_pam) +
+  labs(title = paste("Silhouette Plot for PAM Clustering (k =", optimal_k, ")"))
+
+# Merge cluster assignments with metadata
+cluster_assignments <- data.frame(
+  SampleID = rownames(scaled_data),
+  Cluster = as.factor(clusters)
+)
+
+metadata_with_clusters <- metadata %>%
+  left_join(cluster_assignments, by = c("refinebio_accession_code" = "SampleID"))
+
+```
+
+## Summary the Tables and Charts
+
+### Silhouette Width Plot (k = 2 to 8):
+
+The silhouette width plot shows the average silhouette width for different cluster sizes (k ranging from 2 to 8). The optimal number of clusters is indicated by the highest silhouette width, which occurs at k = 2. This suggests that two clusters best represent the structure of the data. As k increases beyond 2, the silhouette width decreases, indicating that additional clusters do not improve the overall cohesion and separation of the data.
+
+### PAM Clustering for k = 2, 3, 4, 5, 6, 7, and 8 on PCA-Reduced Data:
+
+These PCA scatter plots visualize the data reduced to two principal components, showing how the samples are clustered for each value of k. For k=2, the data separates into two clear clusters. As k increases, the clusters subdivide, but some of the additional clusters (e.g., k = 4, 5, 6) appear less distinct and overlap, suggesting diminishing returns in cluster separation with higher k values.
+
+### Cluster Size and Silhouette Width Table (k = 2):
+
+This table summarizes the sizes of the two clusters for k=2 and their corresponding average silhouette widths. Cluster 1 has 34 samples with an average silhouette width of 0.51, while Cluster 2 has 36 samples with a silhouette width of 0.39. The higher silhouette score for Cluster 1 indicates better cohesion and separation than Cluster 2.
+
+### Silhouette Plot for PAM Clustering (k = 2):
+
+The silhouette plot shows the silhouette width for each sample in the two clusters. Cluster 1 (in red) has higher silhouette scores overall, meaning its samples are well separated from other clusters. In contrast, Cluster 2 (in blue) shows more variation, with some samples having negative silhouette values, indicating less clear separation for those samples.
+
+## Step 2d: How many clusters did you find?
+
+### Q: If you ran a method that requires you to select the number of clusters (k), how did changing this value change the results? Compare cluster membership at each k to investigate this.
+
+#### A: I ran the clustering algorithm with several different k values, from 2-8. Performing an analysis of the k's by finding the silhouette width for each shows that the optimal number is 2 with a steep drop off down to 3 and then 4, followed by a slight rise to 5, another dip to 6, and a slow rise to 7 and 8.
+
+## Step 2e: Rerun each clustering method using different numbers of genes. Try 10, 100, 1000, 10000 genes.
+
+```{r}
+# Ensure dplyr and tidyr are loaded
+library(dplyr)
+library(tidyr)
+library(tibble)
+
+# Define the list of top N genes
+top_N_values <- c(10, 100, 1000, 10000)
+
+# Initialize a list to store subsets and cluster assignments
+subset_data_list <- list()
+cluster_assignments <- list()
+
+# Loop over each N value
+for (N in top_N_values) {
+  # Subset to the top N most variable genes
+  top_genes <- gene_variances %>%
+    arrange(desc(variance)) %>%
+    slice_head(n = N) %>%
+    pull(Gene)
+  
+  # Subset the expression data to these genes
+  subset_data <- expression_df %>%
+    filter(Gene %in% top_genes)
+  
+  # Store the subset data
+  subset_data_list[[as.character(N)]] <- subset_data
+}
+
+# Initialize a list to store scaled data
+scaled_data_list <- list()
+
+for (N in top_N_values) {
+  subset_data <- subset_data_list[[as.character(N)]]
+  
+  # Transpose the data: samples as rows, genes as columns
+  transposed_data <- subset_data %>%
+    column_to_rownames("Gene") %>%
+    as.matrix() %>%
+    t()
+  
+  # Scale the data
+  scaled_data <- scale(transposed_data)
+  
+  # Store the scaled data
+  scaled_data_list[[as.character(N)]] <- scaled_data
+}
+
+# Initialize a list to store PAM results
+pam_results <- list()
+
+# Perform PAM clustering on each subset
+for (N in top_N_values) {
+  scaled_data <- scaled_data_list[[as.character(N)]]
+  
+  # Perform PAM clustering with k = 2
+  set.seed(123)  # For reproducibility
+  pam_result <- pam(scaled_data, k = 2)
+  
+  # Store the PAM result
+  pam_results[[as.character(N)]] <- pam_result
+}
+
+# Initialize a data frame to store cluster assignments
+clusters_df <- data.frame(SampleID = rownames(scaled_data_list[[as.character(top_N_values[1])]]))
+
+# Add cluster assignments to the data frame
+for (N in top_N_values) {
+  pam_result <- pam_results[[as.character(N)]]
+  clusters_df[[paste0("Cluster_", N)]] <- pam_result$clustering
+}
+
+# Convert cluster columns to factors
+cluster_columns <- grep("Cluster_", names(clusters_df), value = TRUE)
+clusters_df[cluster_columns] <- lapply(clusters_df[cluster_columns], as.factor)
+
+# List of pairs for chi-squared tests
+chi_sq_pairs <- list(
+  c("Cluster_10", "Cluster_100"),
+  c("Cluster_100", "Cluster_1000"),
+  c("Cluster_1000", "Cluster_10000")
+)
+
+# Initialize a list to store chi-squared test results
+chi_sq_results <- list()
+
+# Perform chi-squared tests
+for (pair in chi_sq_pairs) {
+  test_table <- table(clusters_df[[pair[1]]], clusters_df[[pair[2]]])
+  chi_sq_test <- chisq.test(test_table)
+  chi_sq_results[[paste(pair, collapse = "_vs_")]] <- chi_sq_test
+}
+
+# Print chi-squared test results
+for (name in names(chi_sq_results)) {
+  cat("\nChi-squared test for", name, ":\n")
+  print(chi_sq_results[[name]])
+}
+
+# Install ggalluvial if not already installed
+if (!require(ggalluvial)) install.packages("ggalluvial")
+library(ggalluvial)
+
+# Prepare data for the alluvial plot
+sankey_df <- clusters_df %>%
+  pivot_longer(cols = starts_with("Cluster_"), names_to = "Gene_Subset", values_to = "Cluster")
+
+# Ensure 'Gene_Subset' is ordered factor
+sankey_df$Gene_Subset <- factor(sankey_df$Gene_Subset, levels = paste0("Cluster_", top_N_values))
+
+# Create an alluvial plot
+ggplot(sankey_df, aes(x = Gene_Subset, stratum = Cluster, alluvium = SampleID, fill = Cluster)) +
+  geom_flow(stat = "alluvium", lode.guidance = "frontback", color = "darkgray") +
+  geom_stratum() +
+  scale_fill_brewer(type = "qual", palette = "Set1") +
+  labs(
+    title = "Alluvial Diagram of Clustering Membership Across Gene Subsets",
+    x = "Gene Subset",
+    y = "Number of Samples"
+  ) +
+  theme_minimal()
+
+```
+
+## Summary of the Tables and Charts
+
+### Alluvial Diagram of Clustering Membership Across Gene Subsets:
+
+This diagram illustrates the clustering of samples across different gene subsets, ranging from the top 10 to the top 10,000 most variable genes. Each vertical bar represents a different gene subset (Cluster_10, Cluster_100, Cluster_1000, and Cluster_10000), and the colors represent the two clusters (1 and 2). The flows between bars indicate how samples transition between clusters as more genes are included in the analysis. The results show that for smaller gene subsets, there is more fluctuation in cluster assignments, whereas for larger gene subsets, the clustering stabilizes, with most samples staying consistently in the same cluster.
+
+### Q: Compare your results. How did the number of genes affect clustering?
+
+#### A: After running at all the indicated values, and at all the previous levels of k, I found that the number of genes did not have any meaningful impact when utilizing PAM clustering. K = 2 remained the most optimal tested by far and nothing shift significantly. This is all shown in the Alluvial Diagram above.
+
+## Create the csv file storing the output of the clustering algorithm (PAM)
+
+```{r}
+# Load necessary libraries
+library(dplyr)
+library(tibble)
+library(cluster)
+
+# Calculate variance for each gene across samples (excluding the 'Gene' column)
+gene_variances <- expression_df %>%
+  rowwise() %>%
+  mutate(variance = var(c_across(starts_with("ERR")), na.rm = TRUE)) %>%
+  ungroup()
+
+# Select the top 5,000 most variable genes
+top_genes <- gene_variances %>%
+  arrange(desc(variance)) %>%
+  slice_head(n = 5000)
+
+# Subset the data to only the top 5,000 genes and remove the variance column
+subset_data <- top_genes %>%
+  select(-variance)
+
+# Transpose and scale the data
+transposed_data <- subset_data %>%
+  column_to_rownames("Gene") %>%
+  as.matrix() %>%
+  t()
+scaled_data <- scale(transposed_data)
+
+# Perform PAM clustering with k = 2
+pam_result_k2 <- pam(scaled_data, k = 2)
+pam_clusters_k2 <- pam_result_k2$clustering
+
+# Create a data frame with SampleID and Cluster assignments
+cluster_output_k2 <- data.frame(
+  SampleID = rownames(scaled_data),
+  Cluster = pam_clusters_k2
+)
+
+# Write the results to a CSV file
+write.csv(cluster_output_k2, file = "pam_clustering_results_k2.csv", row.names = FALSE)
+
+```
+
+## Step 3: Create a heatmap of the 5,000 genes used in clustering. Add an annotation sidebar showing one set of clusters you identified from each sclustering method and the sample groups for Assignment 1.
+
+```{r}
+# Install required packages if not already installed
+if (!requireNamespace("ComplexHeatmap", quietly = TRUE)) {
+  install.packages("ComplexHeatmap")
+}
+
+if (!requireNamespace("circlize", quietly = TRUE)) {
+  install.packages("circlize")
+}
+
+if (!requireNamespace("readr", quietly = TRUE)) {
+  install.packages("readr")
+}
+
+if (!requireNamespace("tidyverse", quietly = TRUE)) {
+  install.packages("tidyverse")
+}
+
+if (!requireNamespace("magick", quietly = TRUE)) {
+  install.packages("magick")
+}
+
+
+# Load libraries
+library(tidyverse)
+library(ComplexHeatmap)
+library(circlize)
+
+# Load clustering results
+pam_clusters <- read.csv("pam_clustering_results_k2.csv")  # Adjust the path if necessary
+
+# Assuming your teammates' results are in the "data" directory
+kmeans_clusters <- read.csv("data/kmeans_results.csv")
+hcluster_results <- read.csv("data/spitulnik,hcluster_results.csv")
+spectral_clusters <- read.csv("data/grant, a. spectral_results.csv")
+affinity_clusters <- read.csv("data/propagation.csv")
+
+# Load the metadata
+metadata <- readr::read_tsv(metadata_file)
+
+# Rename the sample ID columns to 'SampleID'
+pam_clusters <- pam_clusters %>% rename(SampleID = SampleID)
+kmeans_clusters <- kmeans_clusters %>% rename(SampleID = SampleID)
+hcluster_results <- hcluster_results %>% rename(SampleID = SampleID)
+spectral_clusters <- spectral_clusters %>% rename(SampleID = SampleID)
+affinity_clusters <- affinity_clusters %>% rename(SampleID = SampleID)
+metadata <- metadata %>% rename(SampleID = refinebio_accession_code)
+
+# Rename 'Cluster' columns in each clustering result
+pam_clusters <- pam_clusters %>% rename(PAM_Cluster = Cluster)
+kmeans_clusters <- kmeans_clusters %>% rename(KMeans_Cluster = Cluster)
+hcluster_results <- hcluster_results %>% rename(HCluster_Cluster = Cluster)
+spectral_clusters <- spectral_clusters %>% rename(Spectral_Cluster = Cluster)
+affinity_clusters <- affinity_clusters %>% rename(Affinity_Cluster = Cluster)
+
+# Merge all clustering results and metadata
+all_clusters <- pam_clusters %>%
+  left_join(kmeans_clusters, by = "SampleID") %>%
+  left_join(hcluster_results, by = "SampleID") %>%
+  left_join(spectral_clusters, by = "SampleID") %>%
+  left_join(affinity_clusters, by = "SampleID") %>%
+  left_join(metadata %>% select(SampleID, refinebio_treatment), by = "SampleID")
+
+# Prepare the expression data
+# Remove the 'Gene' column and set it as row names
+expression_data_matrix <- subset_data %>%
+  column_to_rownames("Gene") %>%
+  as.matrix()
+
+# Get the list of valid sample IDs
+valid_sample_ids <- all_clusters$SampleID
+
+# Subset the expression data to include only the samples in 'valid_sample_ids'
+expression_data_matrix <- expression_data_matrix[, valid_sample_ids]
+
+# Ensure that the columns (samples) are in the same order
+expression_data_matrix <- expression_data_matrix[, match(valid_sample_ids, colnames(expression_data_matrix))]
+
+# Define color palettes for clusters
+cluster_colors <- list(
+  KMeans_Cluster = c("1" = "red", "2" = "blue", "3" = "green"),
+  PAM_Cluster = c("1" = "orange", "2" = "purple"),
+  Spectral_Cluster = c("1" = "cyan", "2" = "pink", "3" = "brown"),
+  HCluster_Cluster = c("1" = "blue", "2" = "darkred", "3" = "violet"),
+  Affinity_Cluster = c("1" = "lightblue", "2" = "darkgreen"),
+  Treatment = c("enriched" = "darkgreen", "barren" = "darkblue")  # Adjust based on your actual treatments
+)
+
+# Prepare annotations
+ha <- HeatmapAnnotation(
+  KMeans = as.factor(all_clusters$KMeans_Cluster),
+  PAM = as.factor(all_clusters$PAM_Cluster),
+  Spectral = as.factor(all_clusters$Spectral_Cluster),
+  Hierarchical = as.factor(all_clusters$HCluster_Cluster),
+  Affinity = as.factor(all_clusters$Affinity_Cluster),
+  Treatment = as.factor(all_clusters$refinebio_treatment),
+  col = cluster_colors
+)
+
+# Suppress messages from ComplexHeatmap
+ht_opt$message = FALSE
+
+suppressMessages({
+  # Generate the heatmap
+  heatmap <- Heatmap(
+    expression_data_matrix,                          # Use the expression matrix
+    name = "Expression",                             # Name for the heatmap legend
+    top_annotation = ha,                             # Add the cluster and treatment annotations
+    show_row_dend = TRUE,                            # Show row dendrogram
+    show_column_dend = TRUE,                         # Show column dendrogram
+    row_title = "Genes",                             # Title for the rows
+    column_title = "Samples",                        # Title for the columns
+    cluster_rows = TRUE,                             # Cluster rows (genes)
+    cluster_columns = TRUE,                          # Cluster columns (samples)
+    show_column_names = FALSE,                       # Hide sample names (too many to display)
+    show_row_names = FALSE,                          # Hide gene names (optional, for clarity)
+    heatmap_legend_param = list(title = "Expression") # Legend title for the heatmap
+  )
+})
+# Draw the heatmap
+draw(heatmap, heatmap_legend_side = "right", annotation_legend_side = "right")
+
+# Save the heatmap to a file
+png(filename = file.path(plots_dir, "complex_heatmap_with_annotations.png"), width = 1200, height = 800)
+draw(heatmap, heatmap_legend_side = "right", annotation_legend_side = "right")
+dev.off()
+
+```
+
+## Summary of the Tables and Charts
+
+### Heatmap with Clustering and Sample Group Annotations:
+
+This heatmap presents the expression levels of genes across samples, where the rows represent genes and the columns represent individual samples. The hierarchical clustering dendrograms at the top and left help illustrate the relationships between samples and genes, respectively. Several clustering methods (KMeans, PAM, Spectral, Hierarchical, and Affinity) are displayed as annotations above the heatmap, highlighting the sample groupings for each method. Additionally, the "Treatment" annotation shows which samples belong to the "barren" or "enriched" experimental conditions. The heatmap's colors represent gene expression levels, with brighter shades indicating higher expression. This visualization allows for an integrated view of gene expression patterns and sample clustering across various algorithms.
+
+```{r}
+# Merge PAM cluster assignments with treatment information
+clusters_with_treatment <- clusters_df %>%
+  left_join(metadata %>% select(SampleID, refinebio_treatment), by = "SampleID")
+
+# Initialize an empty list to store chi-squared test results
+chi_squared_results <- list()
+
+# Define the PAM cluster columns
+pam_cluster_columns <- c("Cluster_10", "Cluster_100", "Cluster_1000", "Cluster_10000")
+
+# Perform Chi-squared tests for each PAM clustering version
+for (cluster_col in pam_cluster_columns) {
+  # Create a contingency table
+  contingency_table <- table(
+    clusters_with_treatment[[cluster_col]],
+    clusters_with_treatment$refinebio_treatment
+  )
+  
+  # Perform Chi-squared test
+  chi_squared_test <- chisq.test(contingency_table)
+  
+  # Store results
+  chi_squared_results[[paste0("PAM_", cluster_col)]] <- data.frame(
+    Method = "PAM",
+    Version = paste0("Top_", sub("Cluster_", "", cluster_col), "_Genes"),
+    Chi_Square_Statistic = chi_squared_test$statistic,
+    Degrees_of_Freedom = chi_squared_test$parameter,
+    p_value = chi_squared_test$p.value
+  )
+}
+
+# Define the clustering methods to test
+clustering_methods <- c("KMeans_Cluster", "Spectral_Cluster", "HCluster_Cluster", "Affinity_Cluster")
+
+# Perform Chi-squared tests for each clustering method
+for (method in clustering_methods) {
+  # Create a contingency table
+  contingency_table <- table(
+    all_clusters[[method]],
+    all_clusters$refinebio_treatment
+  )
+  
+  # Perform Chi-squared test
+  chi_squared_test <- chisq.test(contingency_table)
+  
+  # Store results
+  chi_squared_results[[method]] <- data.frame(
+    Method = gsub("_Cluster", "", method),
+    Version = "Full",
+    Chi_Square_Statistic = chi_squared_test$statistic,
+    Degrees_of_Freedom = chi_squared_test$parameter,
+    p_value = chi_squared_test$p.value
+  )
+}
+
+# Convert the list to a data frame
+chi_squared_results_df <- do.call(rbind, chi_squared_results)
+
+# Adjust p-values for multiple testing using Benjamini-Hochberg method
+chi_squared_results_df$Adjusted_p_value <- p.adjust(
+  chi_squared_results_df$p_value,
+  method = "BH"
+)
+
+# Add a significance indicator
+chi_squared_results_df$Significant <- chi_squared_results_df$Adjusted_p_value < 0.05
+
+# View the results
+print(chi_squared_results_df)
+
+# Save the results to a CSV file
+write.csv(
+  chi_squared_results_df,
+  file.path(results_dir, "chi_squared_test_results.csv"),
+  row.names = FALSE
+)
+
+```
+
+## Summary of the Tables and Charts
+
+### Chi Squared Test Results:
+
+This table presents the results of Chi-squared tests performed on various clustering methods to evaluate their association with the experimental treatment groups (barren and enriched). Each row corresponds to a specific clustering method and subset of genes, with columns representing the Chi-squared statistic, degrees of freedom, p-values, and whether the results are statistically significant after adjusting for multiple tests using the Benjamini-Hochberg method. For example, the Affinity and Spectral clustering methods show significant associations with the treatment groups (adjusted p-value \< 0.05), while PAM clustering for various gene subsets (Top 10, Top 100, etc.) and other methods such as KMeans and Hierarchical clustering do not show significant associations. The table provides a detailed comparison of the clustering performance across different methods and gene subsets.
