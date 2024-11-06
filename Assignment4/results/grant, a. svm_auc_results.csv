@@ -1,4 +1,4 @@
-Sample,top_10_genes,top_100_genes,top_1000_genes,top_10000_genes
+SampleID,top_10_genes,top_100_genes,top_1000_genes,top_10000_genes
 ERR2239979,1,1,1,1
 ERR2239980,1,1,1,1
 ERR2239981,1,1,1,1
