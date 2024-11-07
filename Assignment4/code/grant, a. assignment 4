@@ -1,0 +1,297 @@
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.svm import SVC
+from scipy.stats import spearmanr, pearsonr
+from statsmodels.stats.multitest import multipletests
+from sklearn.metrics import roc_auc_score
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.preprocessing import LabelEncoder
+from matplotlib.colors import ListedColormap
+from scipy.cluster.hierarchy import linkage, dendrogram
+
+expression_data = pd.read_csv('/Users/aliciagrant/PycharmProjects/BioInfo/results/top_5000_genes.tsv', sep='\t', index_col=0)
+expression_data = expression_data.apply(pd.to_numeric, errors='coerce').dropna(axis=1, how='all')
+metadata = pd.read_csv('/Users/aliciagrant/PycharmProjects/BioInfo/ERP105973/metadata_ERP105973.tsv', sep='\t', index_col=0)
+
+filtered_metadata = metadata.loc[metadata.index.str.startswith('ERR')]
+
+variances = expression_data.var(axis=1)
+top_5000_genes = variances.nlargest(5000).index
+expression_subset = expression_data.loc[top_5000_genes]
+
+expression_subset = expression_subset.loc[:, filtered_metadata.index]
+
+scaler = StandardScaler()
+expression_scaled = scaler.fit_transform(expression_subset.T)
+
+labels = filtered_metadata['refinebio_treatment'].map({'enriched': 1, 'barren': 2})
+
+X_train, X_test, y_train, y_test = train_test_split(expression_scaled, labels, test_size=0.3, random_state=42)
+
+svm = SVC(kernel='linear', C=1)
+svm.fit(X_train, y_train)
+
+y_pred = svm.predict(X_test)
+
+test_sample_indices = y_test.index
+
+svm_predictions = pd.read_csv('/Users/aliciagrant/PycharmProjects/BioInfo/results/grant, a. svm_predictions.csv')
+svm_predictions.rename(columns={'PredictedClass': 'SVM'}, inplace=True)
+
+knn_predictions = pd.read_csv('/Users/aliciagrant/PycharmProjects/BioInfo/assn4 part2/KNN_prediction_results.csv')
+knn_predictions = knn_predictions.rename(columns={'PredictedClass': 'KNN'})
+
+rf_predictions = pd.read_csv('/Users/aliciagrant/PycharmProjects/BioInfo/assn4 part2/RandomForest_combined_results.csv')
+rf_predictions = rf_predictions[['SampleID', 'PredictedClass']].rename(columns={'PredictedClass': 'RandomForest'})
+
+lr_predictions = pd.read_csv('/Users/aliciagrant/PycharmProjects/BioInfo/assn4 part2/linear_regression_prediction_results.csv')
+lr_predictions = lr_predictions.rename(columns={'sampleId': 'SampleID', 'predicted_class': 'LinearRegression'})
+
+nb_predictions = pd.read_csv('/Users/aliciagrant/PycharmProjects/BioInfo/NaiveBayesGroups.csv')
+nb_predictions = nb_predictions[['Sample', 'Predicted Class with all Genes']].rename(columns={'Sample': 'SampleID', 'Predicted Class with all Genes': 'NaiveBayes'})
+
+pred_matrix = svm_predictions\
+    .merge(knn_predictions[['SampleID', 'KNN']], on='SampleID', how='inner')\
+    .merge(rf_predictions[['SampleID', 'RandomForest']], on='SampleID', how='inner')\
+    .merge(lr_predictions[['SampleID', 'LinearRegression']], on='SampleID', how='inner')\
+    .merge(nb_predictions[['SampleID', 'NaiveBayes']], on='SampleID', how='inner')
+
+pred_matrix['Class1_count'] = (pred_matrix == 1).sum(axis=1)
+pred_matrix['Class2_count'] = (pred_matrix == 2).sum(axis=1)
+pred_matrix['Class3_count'] = (pred_matrix == 3).sum(axis=1)
+
+correlation_results = []
+p_value_results = []
+
+models = ['SVM', 'KNN', 'RandomForest', 'LinearRegression', 'NaiveBayes']
+class_counts = ['Class1_count', 'Class2_count', 'Class3_count']
+
+for model in models:
+    for class_count in class_counts:
+        corr, p_value = pearsonr(pred_matrix[model], pred_matrix[class_count])
+        correlation_results.append(corr)
+        p_value_results.append(p_value)
+
+_, adjusted_p_values, _, _ = multipletests(p_value_results, method='fdr_bh')
+
+correlation_df = pd.DataFrame({
+    'Model': [model for model in models for _ in class_counts],
+    'Class Count': class_counts * len(models),
+    'Correlation Coefficient': correlation_results,
+    'P-Value': p_value_results,
+    'Adjusted P-Value': adjusted_p_values
+})
+
+correlation_df.to_csv('/Users/aliciagrant/PycharmProjects/BioInfo/results/model_class_correlation.csv', index=False)
+
+print(correlation_df)
+
+pred_matrix.to_csv('/Users/aliciagrant/PycharmProjects/BioInfo/results/prediction_stability_matrix.csv', index=False)
+
+print(pred_matrix.head())
+print(pred_matrix[['Class1_count', 'Class2_count', 'Class3_count']].describe())
+
+#-------------------------retrain data to clusters!-------------------------------------
+
+sample_ids = metadata['refinebio_accession_code'].values
+expression_data = expression_data[sample_ids]
+labels = metadata['refinebio_treatment'].map({'enriched': 1, 'barren': 2}).values
+
+result_df = pd.DataFrame(index=expression_data.columns,
+                         columns=['top_10_genes', 'top_100_genes', 'top_1000_genes', 'top_10000_genes', 'top_5000_genes'])
+
+def retrain_svm(expression_data, labels, num_genes):
+    gene_variances = expression_data.var(axis=1)
+    top_genes = gene_variances.nlargest(num_genes).index
+    X = expression_data.loc[top_genes].T
+    y = labels
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    scaler = StandardScaler()
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.transform(X_test)
+    svm_model = SVC(probability=True, random_state=42)
+    svm_model.fit(X_train, y_train)
+    y_prob = svm_model.predict_proba(X_test)[:, 1]
+
+    auc_score = roc_auc_score(y_test, y_prob)
+    return auc_score, svm_model
+
+def predict_samples(model, expression_data, num_genes):
+    gene_variances = expression_data.var(axis=1)
+    top_genes = gene_variances.nlargest(num_genes).index
+    X = expression_data.loc[top_genes].T
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+
+    predictions = model.predict(X_scaled)
+    return predictions
+
+for num_genes in [10, 100, 1000, 10000, 5000]:
+    auc_score, svm_model = retrain_svm(expression_data, labels, num_genes)
+    print(f'Performance for {num_genes} genes: AUC = {auc_score}')
+
+    predictions = predict_samples(svm_model, expression_data, num_genes)
+    result_df[f'top_{num_genes}_genes'] = predictions
+
+def classify_majority_vote(row):
+    predictions = [row[f'top_{num_genes}_genes'] for num_genes in [10, 100, 1000, 5000, 10000]]
+    vote_count = {1: predictions.count(1), 2: predictions.count(2)}
+    return 'enriched' if vote_count[1] > vote_count[2] else 'barren'
+
+result_df['Class Label'] = result_df.apply(classify_majority_vote, axis=1)
+predicted_clusters = pd.read_csv('/Users/aliciagrant/PycharmProjects/BioInfo/results/grant, a. svm_predictions.csv')
+
+result_df = result_df.merge(predicted_clusters[['SampleID', 'PredictedClass']], left_index=True, right_on='SampleID', how='left')
+result_df.rename(columns={'PredictedClass': 'PredictedCluster'}, inplace=True)
+
+sample_id_col = result_df.pop('SampleID')
+result_df.insert(0, 'SampleID', sample_id_col)
+
+class_label_col = result_df.pop('Class Label')
+result_df.insert(1, 'Class Label', class_label_col)
+
+result_df.to_csv('/Users/aliciagrant/PycharmProjects/BioInfo/results/heatmap_help.csv', index=False)
+
+print(result_df)
+
+#-------------------------find auc scores!-------------------------------------
+
+naive_bayes_df = pd.read_csv('/Users/aliciagrant/PycharmProjects/BioInfo/NaiveBayesGroups.csv')
+knn_df = pd.read_csv('/Users/aliciagrant/PycharmProjects/BioInfo/Combined_KNN_predictions.csv')
+rf_df = pd.read_csv('/Users/aliciagrant/PycharmProjects/BioInfo/RandomForest_predictions_by_gene_subset.csv')
+lr_df = pd.read_csv('/Users/aliciagrant/PycharmProjects/BioInfo/spitulnik_combined_predictions.csv')
+svm_df = pd.read_csv('/Users/aliciagrant/PycharmProjects/BioInfo/results/grant, a. svm_auc_results.csv')
+
+print("Naive Bayes columns:", naive_bayes_df.columns)
+print("KNN columns:", knn_df.columns)
+print("Random Forest columns:", rf_df.columns)
+print("Linear Regression columns:", lr_df.columns)
+print("SVM columns:", svm_df.columns)
+
+naive_bayes_df['Actual Class Label'] = naive_bayes_df['Actual Class Label'].apply(lambda x: 1 if x == 'enriched' else 0)
+
+def calculate_auc(actual, predicted):
+    return roc_auc_score(actual, predicted)
+
+naive_bayes_auc = {}
+for genes in ['10', '100', '1000', '10000']:
+    auc_score = calculate_auc(naive_bayes_df['Actual Class Label'], naive_bayes_df[f'Predicted Class with n = {genes}'])
+    naive_bayes_auc[genes] = 1 - auc_score
+
+def model_auc(df, model_name, prefix='top_'):
+    auc_scores = {}
+    for genes in ['10', '100', '1000', '10000']:
+        auc_score = calculate_auc(naive_bayes_df['Actual Class Label'], df[f'{prefix}{genes}_genes'])
+        auc_scores[genes] = 1 - auc_score
+    return auc_scores
+
+knn_auc = model_auc(knn_df, "KNN")
+rf_auc = model_auc(rf_df, "Random Forest")
+lr_auc = model_auc(lr_df, "Linear Regression")
+svm_auc = model_auc(svm_df, "SVM", prefix='top_')
+
+auc_results = pd.DataFrame({
+    'Gene Subset': ['10', '100', '1000', '10000'],
+    'Naive Bayes': list(naive_bayes_auc.values()),
+    'KNN': list(knn_auc.values()),
+    'Random Forest': list(rf_auc.values()),
+    'Linear Regression': list(lr_auc.values()),
+    'SVM': list(svm_auc.values())
+})
+
+plt.figure(figsize=(10, 6))
+sns.lineplot(data=auc_results.melt(id_vars="Gene Subset", var_name="Model", value_name="AUC"),
+             x="Gene Subset", y="AUC", hue="Model", marker='o')
+
+plt.title('Model Performance (AUC) Across Gene Subsets')
+plt.xlabel('Gene Subset')
+plt.ylabel('AUC Score')
+plt.legend(title='Model')
+plt.grid(True)
+plt.savefig('/Users/aliciagrant/PycharmProjects/BioInfo/auc_performance_plot.png', bbox_inches='tight')
+plt.show()
+
+auc_results.to_csv('/Users/aliciagrant/PycharmProjects/BioInfo/auc_tabular_results.csv', index=False)
+
+print(auc_results)
+
+#--------------------------make heatmap!-------------------------------------
+
+knn_data = pd.read_csv(
+    '/Users/aliciagrant/PycharmProjects/BioInfo/assn4 part2/KNN_prediction_results.csv')
+linear_regression_data = pd.read_csv(
+    '/Users/aliciagrant/PycharmProjects/BioInfo/assn4 part2/linear_regression_prediction_results.csv')
+random_forest_data = pd.read_csv(
+    '/Users/aliciagrant/PycharmProjects/BioInfo/assn4 part2/RandomForest_combined_results.csv')
+svm_data = pd.read_csv(
+    '/Users/aliciagrant/PycharmProjects/BioInfo/results/grant, a. svm_predictions.csv')
+naive_bayes_data = pd.read_csv(
+    '/Users/aliciagrant/PycharmProjects/BioInfo/NaiveBayesGroups.csv')
+
+knn_data = knn_data.rename(columns={'PredictedClass': 'PredictedClass_KNN'})
+linear_regression_data = linear_regression_data.rename(columns={'PredictedClass': 'PredictedClass_LR'})
+random_forest_data = random_forest_data.rename(columns={'PredictedClass': 'PredictedClass_RF'})
+svm_data = svm_data.rename(columns={'PredictedClass': 'PredictedClass_SVM'})
+naive_bayes_data = naive_bayes_data.rename(columns={'PredictedClass': 'PredictedClass_NB'})
+
+combined_predictions = pd.merge(knn_data[['SampleID', 'PredictedClass_KNN']],
+                                 linear_regression_data[['SampleID', 'PredictedClass_LR']],
+                                 on='SampleID', how='inner')
+combined_predictions = pd.merge(combined_predictions,
+                                 random_forest_data[['SampleID', 'PredictedClass_RF']],
+                                 on='SampleID', how='inner')
+combined_predictions = pd.merge(combined_predictions,
+                                 svm_data[['SampleID', 'PredictedClass_SVM']],
+                                 on='SampleID', how='inner')
+combined_predictions = pd.merge(combined_predictions,
+                                 naive_bayes_data[['SampleID', 'PredictedClass_NB']],
+                                 on='SampleID', how='inner')
+
+naive_bayes_data['PredictedClass_NB'] = naive_bayes_data['PredictedClass_NB'].map({
+    'Barren': 'Teal', 'Other': 'Yellow', 'Enriched': 'DarkPurple'})
+
+label_encoder = LabelEncoder()
+
+for column in combined_predictions.columns[1:]:
+    combined_predictions[column] = label_encoder.fit_transform(combined_predictions[column])
+
+
+heatmap_data = combined_predictions.drop(columns=['SampleID'])
+heatmap_data = (heatmap_data - heatmap_data.mean()) / heatmap_data.std()
+
+
+hierarch_column = linkage(heatmap_data.T, method='ward')
+hierarch_row = linkage(heatmap_data, method='ward')
+
+
+sns.set(style="whitegrid")
+
+custom_colors = ['darkviolet', 'teal', 'yellow']
+cmap = ListedColormap(custom_colors)
+
+g = sns.clustermap(
+    heatmap_data,
+    row_linkage=hierarch_row,
+    col_linkage=hierarch_column,
+    cmap='viridis',
+    xticklabels=combined_predictions.columns[1:],
+    yticklabels=combined_predictions['SampleID'],
+    figsize=(12, 20),
+    row_colors=combined_predictions['PredictedClass_NB'].map({'Barren': 'Teal', 'Other': 'Yellow', 'Enriched': 'DarkPurple'}),
+    cbar_pos=(0.02, 0.8, 0.03, 0.18),
+    annot=False
+)
+
+handles = [
+    plt.Line2D([0], [0], marker='o', color='w', markerfacecolor='darkviolet', markersize=10, label='Enriched'),
+    plt.Line2D([0], [0], marker='o', color='w', markerfacecolor='teal', markersize=10, label='Barren'),
+    plt.Line2D([0], [0], marker='o', color='w', markerfacecolor='yellow', markersize=10, label='Other')
+]
+g.ax_row_dendrogram.legend(handles=handles, title="Group", loc='upper left', bbox_to_anchor=(1, 1))
+
+plt.savefig('/Users/aliciagrant/PycharmProjects/BioInfo/final_heatmap.png', bbox_inches='tight')
+
+plt.show()
