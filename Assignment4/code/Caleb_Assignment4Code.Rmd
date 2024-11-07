@@ -1,0 +1,527 @@
+---
+title: "Caleb_Assignment4Code"
+author: "Caleb Losch"
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    latex_engine: xelatex
+  html_document: default
+---
+
+```{r}
+# Create the data folder if it doesn't exist
+if (!dir.exists("data")) {
+  dir.create("data")
+}
+
+# Define the file path to the plots directory
+plots_dir <- "plots"
+
+# Create the plots folder if it doesn't exist
+if (!dir.exists(plots_dir)) {
+  dir.create(plots_dir)
+}
+
+# Define the file path to the results directory
+results_dir <- "results"
+
+# Create the results folder if it doesn't exist
+if (!dir.exists(results_dir)) {
+  dir.create(results_dir)
+}
+```
+
+```{r}
+# Define the file path to the data directory
+# Replace with the path of the folder the files will be in
+data_dir <- file.path("data", "ERP105973")
+
+# Declare the file path to the gene expression matrix file
+# inside directory saved as `data_dir`
+# Replace with the path to your dataset file
+data_file <- file.path(data_dir, "ERP105973.tsv")
+
+# Declare the file path to the metadata file
+# inside the directory saved as `data_dir`
+# Replace with the path to your metadata file
+metadata_file <- file.path(data_dir, "metadata_ERP105973.tsv")
+```
+
+```{r}
+# Check if the gene expression matrix file is at the path stored in `data_file`
+file.exists(data_file)
+
+# Check if the metadata file is at the file path stored in `metadata_file`
+file.exists(metadata_file)
+```
+
+```{r}
+# Load BiocManager if it's not already installed
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+# Install the mouse annotation package
+if (!("org.Ss.eg.db" %in% installed.packages())) {
+  # Install this package if it isn't installed yet
+  BiocManager::install("org.Ss.eg.db", update = FALSE)
+}
+
+# Attach the library
+library(org.Ss.eg.db)
+
+# We will need this so we can use the pipe: %>%
+library(magrittr)
+```
+
+## Step 1: Load the expression data and matching metadata that you processed in Assignment 2
+
+```{r}
+# Read in metadata TSV file
+metadata <- readr::read_tsv(metadata_file)
+
+# Read in data TSV file
+expression_df <- readr::read_tsv(data_file) %>%
+  # Tuck away the Gene ID column as row names
+  tibble::column_to_rownames("Gene")
+
+# Make the data in the order of the metadata
+expression_df <- expression_df %>%
+  dplyr::select(metadata$refinebio_accession_code)
+
+# Check if this is in the same order
+all.equal(colnames(expression_df), metadata$refinebio_accession_code)
+
+# Bring back the "Gene" column in preparation for mapping
+expression_df <- expression_df %>%
+  tibble::rownames_to_column("Gene")
+
+head(expression_df)
+```
+
+## Step 2a: Subset to the 5,000 most variable genes
+
+```{r}
+library(dplyr)
+
+# Calculate variance for each gene across samples (excluding the 'Gene' column)
+gene_variances <- expression_df %>%
+  rowwise() %>%
+  mutate(variance = var(c_across(starts_with("ERR")), na.rm = TRUE)) %>%
+  ungroup()
+
+# Select the top 5,000 most variable genes
+top_genes <- gene_variances %>%
+  arrange(desc(variance)) %>%
+  slice_head(n = 5000)
+
+# Subset the data to only the top 5,000 genes and remove the variance column
+subset_data <- top_genes %>%
+  select(-variance)
+
+# Transpose the data: samples as rows, genes as columns
+transposed_data <- subset_data %>%
+  select(-Gene) %>%
+  as.matrix() %>%
+  t()
+
+#Scale the data (mean = 0, sd = 1)
+scaled_data <- scale(transposed_data)
+```
+
+## Step 2b-f: Using that subset of the data, select and run an algorithm (Random Forest)
+
+```{r}
+# Load required libraries
+library(tidymodels)
+library(pROC) # for AUC calculation
+library(ranger)
+
+# Verify structure of scaled_data
+scaled_data <- as.data.frame(scaled_data)
+print(dim(scaled_data))  # Ensure it has 70 rows and a number of columns matching the gene subset
+
+# Load PAM results and ensure SampleID is included in `df`
+pam_results <- read.csv(file.path("data", "pam_clustering_results_k3.csv"))
+
+# Modify `df` to include SampleID and PAM clusters as the outcome for training
+df <- scaled_data  # Use scaled data for predictors
+df$SampleID <- pam_results$SampleID  # Add SampleID column
+df$cluster <- factor(pam_results$Cluster)  # Assign clusters from PAM as the target
+
+# Split data for training and testing
+set.seed(123)
+data_split <- initial_split(df, prop = 0.8)
+train_data <- training(data_split)
+test_data <- testing(data_split)
+
+# Define the Random Forest model
+rf_spec <- rand_forest(mtry = 3, trees = 20) %>%
+  set_engine("ranger") %>%
+  set_mode("classification")
+
+# Define workflow for cluster prediction
+rf_wf <- workflow() %>%
+  add_model(rf_spec) %>%
+  add_variables(outcomes = cluster, predictors = -SampleID)
+
+# Fit the Random Forest model for predicting clusters
+rf_fit <- rf_wf %>% fit(data = train_data)
+
+# Predict on the full dataset to align with PAM results
+rf_predictions <- predict(rf_fit, new_data = df, type = "class") %>%
+  bind_cols(df %>% select(SampleID)) %>%
+  rename(PredictedClass = .pred_class)
+
+# Combine Random Forest predictions with PAM results
+combined_results <- pam_results %>%
+  left_join(rf_predictions, by = "SampleID")
+
+print(combined_results)
+
+# Save the combined results to CSV for reporting
+write.csv(combined_results, file = file.path("results", "RandomForest_combined_results.csv"), row.names = FALSE)
+
+```
+
+## Summary of the Tables and Charts
+
+### Table of clusters and predicted values
+
+This table provides a detailed view of how well the model aligns with the clustering from PAM, helping identify areas of strength or improvement in the Random Forest predictions based on the 5000 most variable genes.
+
+## Step 3: Calculate the sample-specific area under the ROC curve (AUC) across the predictive models created by each student on your team
+
+```{r}
+# Load necessary libraries
+library(readr)
+library(dplyr)
+library(pROC)
+
+# Load actual class labels from NaiveBayesGroups.csv
+actual_labels <- read_csv("data/NaiveBayesGroups.csv") %>%
+  select(Sample, `Actual Class Value`) %>%
+  rename(SampleID = Sample, ActualClass = `Actual Class Value`)
+
+# Load prediction files focusing only on columns for 5000 most variable genes
+svm_predictions <- read_csv("data/grant, a. svm_predictions.csv") %>%
+  select(SampleID, PredictedClass) %>%
+  rename(SVM = PredictedClass)
+
+knn_predictions <- read_csv("data/KNN_prediction_results.csv") %>%
+  select(SampleID, PredictedClass) %>%
+  rename(KNN = PredictedClass)
+
+lr_predictions <- read_csv("data/linear_regression_prediction_results.csv") %>%
+  select(sampleId, predicted_class) %>%
+  rename(SampleID = sampleId, LR = predicted_class)
+
+naivebayes_predictions <- read_csv("data/NaiveBayesGroups.csv") %>%
+  select(Sample, Predicted_Cluster) %>%
+  rename(SampleID = Sample, NB = Predicted_Cluster)
+
+rf_predictions <- read_csv("results/RandomForest_combined_results.csv") %>%
+  select(SampleID, PredictedClass) %>%
+  rename(RF = PredictedClass)
+
+# Combine predictions based on the 5000 gene subset and add actual class labels
+combined_predictions <- list(svm_predictions, knn_predictions, lr_predictions,
+                             naivebayes_predictions, rf_predictions) %>%
+  reduce(full_join, by = "SampleID") %>%
+  left_join(actual_labels, by = "SampleID")  # Merge actual labels from NaiveBayesGroups.csv
+
+# Calculate ROC and AUC for each model's predictions
+auc_results <- data.frame(Model = character(), AUC = numeric())
+
+for (model in c("SVM", "KNN", "LR", "NB", "RF")) {
+  # Generate ROC object for each model's predictions
+  roc_curve <- roc(combined_predictions$ActualClass, as.numeric(combined_predictions[[model]]), levels = c(2, 1)) # '2' and '1' for barren and enriched
+  auc_value <- auc(roc_curve)
+  
+  # Store the results
+  auc_results <- rbind(auc_results, data.frame(Model = model, AUC = auc_value))
+}
+
+# Save the AUC results
+write_csv(auc_results, "results/Model_AUC_Results.csv")
+
+# Display AUC results for verification
+print(auc_results)
+
+# Part a: Count frequency of each predicted class label across models
+class_counts <- combined_predictions %>%
+  pivot_longer(-SampleID, names_to = "Model", values_to = "PredictedClass") %>%
+  group_by(SampleID, PredictedClass) %>%
+  summarize(Count = n(), .groups = 'drop') %>%
+  pivot_wider(names_from = PredictedClass, values_from = Count, values_fill = 0)
+
+# Display the class_counts for verification
+print(class_counts)
+
+# Part b: Calculate the number of models predicting the same cluster for each sample
+same_cluster_count <- combined_predictions %>%
+  pivot_longer(-SampleID, names_to = "Model", values_to = "PredictedClass") %>%
+  group_by(SampleID) %>%
+  summarize(ModeClass = as.integer(names(sort(table(PredictedClass), decreasing = TRUE)[1])),
+            ModelAgreement = sum(PredictedClass == ModeClass), .groups = 'drop')
+
+# Part c: Correlation and statistical test (Chi-squared) to evaluate stability
+correlation_test <- chisq.test(same_cluster_count$ModelAgreement, same_cluster_count$ModeClass)
+adjusted_p_values <- p.adjust(correlation_test$p.value, method = "BH")
+
+# Save the results
+write_csv(class_counts, "results/Model_Class_Prediction_Counts.csv")
+write_csv(same_cluster_count, "results/Model_Agreement_Counts.csv")
+write_csv(data.frame(Correlation_p_value = correlation_test$p.value, Adjusted_p_value = adjusted_p_values),
+          "results/Correlation_Test_Results.csv")
+
+```
+
+## Step 4: Retrain each predictive model using different numbers of genes. Try 10, 100, 1000, and 10000 genes
+
+```{r}
+# Load required libraries
+library(tidymodels)
+library(ranger)
+
+# Define the list of gene subset sizes
+gene_counts <- c(10, 100, 1000, 10000)
+
+# Load PAM results and ensure SampleID is included
+pam_results <- read.csv(file.path("data", "pam_clustering_results_k3.csv"))
+
+# Initialize a list to store predictions for each gene subset
+predictions_list <- list()
+
+# Function to train and predict for a specific number of genes
+train_and_predict <- function(gene_count) {
+  # Subset to the top N most variable genes
+  top_genes <- gene_variances %>%
+    arrange(desc(variance)) %>%
+    slice_head(n = gene_count)
+  
+  # Prepare data with only the selected genes
+  subset_data <- top_genes %>%
+    select(-variance)
+  
+  # Transpose and scale the data
+  transposed_data <- subset_data %>%
+    select(-Gene) %>%
+    as.matrix() %>%
+    t()
+  
+  scaled_data <- scale(transposed_data)
+  
+  # Create the final data frame with predictors and SampleID
+  df <- as.data.frame(scaled_data)
+  df$SampleID <- pam_results$SampleID
+  df$cluster <- factor(pam_results$Cluster)
+  
+  # Split data for training and testing
+  set.seed(123)
+  data_split <- initial_split(df, prop = 0.8)
+  train_data <- training(data_split)
+  test_data <- testing(data_split)
+  
+  # Define the Random Forest model
+  rf_spec <- rand_forest(mtry = 3, trees = 20) %>%
+    set_engine("ranger") %>%
+    set_mode("classification")
+  
+  # Define workflow for cluster prediction
+  rf_wf <- workflow() %>%
+    add_model(rf_spec) %>%
+    add_variables(outcomes = cluster, predictors = -SampleID)
+  
+  # Fit the Random Forest model
+  rf_fit <- rf_wf %>% fit(data = train_data)
+  
+  # Predict on the full dataset to align with PAM results
+  rf_predictions <- predict(rf_fit, new_data = df, type = "class") %>%
+    bind_cols(df %>% select(SampleID)) %>%
+    rename(PredictedClass = .pred_class)
+  
+  # Rename the PredictedClass column to reflect the gene count
+  rf_predictions <- rf_predictions %>%
+    rename(!!paste0("top_", gene_count, "_genes") := PredictedClass)
+  
+  return(rf_predictions)
+}
+
+# Loop over each gene subset and store predictions
+for (gene_count in gene_counts) {
+  predictions_list[[as.character(gene_count)]] <- train_and_predict(gene_count)
+}
+
+# Start with the SampleID column from PAM results
+combined_predictions <- pam_results %>%
+  select(SampleID)
+
+# Combine predictions for each subset into a single data frame
+for (gene_count in gene_counts) {
+  combined_predictions <- combined_predictions %>%
+    left_join(predictions_list[[as.character(gene_count)]], by = "SampleID")
+}
+
+# Save the combined predictions to CSV
+write.csv(combined_predictions, file = file.path("results", "RandomForest_predictions_by_gene_subset.csv"), row.names = FALSE)
+
+```
+
+## Get data from teammates and perform modeling
+
+```{r}
+# Load required libraries
+library(readr)
+library(dplyr)
+library(pROC)
+
+# Load actual class labels from NaiveBayesGroups.csv
+actual_labels <- read_csv("data/NaiveBayesGroups.csv") %>%
+  select(Sample, `Actual Class Value`) %>%
+  rename(SampleID = Sample, ActualClass = `Actual Class Value`)
+
+# Load predictions for each model across the gene subsets
+svm_predictions <- read_csv("data/grant, a. svm_auc_results.csv") %>%
+  rename(SampleID = SampleID)
+
+knn_predictions <- read_csv("data/Combined_KNN_predictions.csv") %>%
+  rename(SampleID = SampleID)
+
+rf_predictions <- read_csv("results/RandomForest_predictions_by_gene_subset.csv") %>%
+  rename(SampleID = SampleID)
+
+# List models with their prediction data for each subset of genes
+model_predictions <- list(
+  SVM = svm_predictions,
+  KNN = knn_predictions,
+  RF = rf_predictions
+)
+
+# Gene subset sizes
+gene_subset_sizes <- c(10, 100, 1000, 10000)
+
+# Data frame to store AUC results for each model and gene subset
+auc_results <- data.frame(Model = character(), Gene_Subset = integer(), AUC = numeric())
+
+# Loop through each model and gene subset, calculating the AUC
+for (model_name in names(model_predictions)) {
+  model_data <- model_predictions[[model_name]]
+  
+  # Merge with actual labels
+  model_data <- model_data %>%
+    left_join(actual_labels, by = "SampleID")
+  
+  # Calculate AUC for each gene subset
+  for (gene_count in gene_subset_sizes) {
+    # Column name for the gene subset in the prediction file
+    subset_col <- paste0("top_", gene_count, "_genes")
+    
+    # Generate ROC and AUC for this gene subset
+    roc_curve <- roc(model_data$ActualClass, as.numeric(model_data[[subset_col]]), levels = c(2, 1))
+    auc_value <- auc(roc_curve)
+    
+    # Store results
+    auc_results <- rbind(auc_results, data.frame(Model = model_name, Gene_Subset = gene_count, AUC = auc_value))
+  }
+}
+
+# Display the results in markdown
+print("AUC Results for Each Model and Gene Subset")
+print(auc_results)
+
+```
+
+## Step 5: Heatmaps and Dendrograms
+
+```{r}
+# Load necessary libraries
+library(ComplexHeatmap)
+library(circlize)
+library(dplyr)
+library(readr)
+
+# Load the expression data and metadata
+data_file <- "data/ERP105973/ERP105973.tsv"
+metadata_file <- "data/ERP105973/metadata_ERP105973.tsv"
+metadata <- read_tsv(metadata_file)
+expression_df <- read_tsv(data_file) %>%
+  tibble::column_to_rownames("Gene")
+
+# Ensure columns of expression data match metadata order
+expression_df <- expression_df %>%
+  dplyr::select(metadata$refinebio_accession_code) %>%
+  tibble::rownames_to_column("Gene")
+
+# Load combined predictions and extract genes used across subsets
+combined_predictions <- read_csv("results/RandomForest_predictions_by_gene_subset.csv")
+selected_genes <- combined_predictions %>%
+  select(starts_with("top_")) %>%
+  unlist() %>%
+  unique()
+
+# Filter expression data for selected genes
+heatmap_data <- expression_df %>%
+  filter(Gene %in% selected_genes) %>%
+  column_to_rownames("Gene")
+
+# Sample groups and annotations
+sample_groups <- read_csv("data/NaiveBayesGroups.csv") %>%
+  select(Sample, `Actual Class Label`) %>%
+  rename(SampleID = Sample, Group = `Actual Class Label`)
+
+# Order columns in heatmap data to match sample order
+heatmap_data <- heatmap_data[, sample_groups$SampleID]
+
+# Predictions for annotations
+predictions <- combined_predictions %>%
+  select(SampleID, starts_with("top_"))
+
+# Adjust colors and refine the annotation legend
+group_colors <- c("enriched" = "blue", "barren" = "red")
+annotation_colors <- list(
+  Group = group_colors,
+  `top_10_genes` = c("1" = "#D73027", "2" = "#FC8D59", "3" = "#91BFDB"),
+  `top_100_genes` = c("1" = "#4575B4", "2" = "#91BFDB", "3" = "#FC8D59"),
+  `top_1000_genes` = c("1" = "#D73027", "2" = "#FC8D59", "3" = "#91BFDB"),
+  `top_10000_genes` = c("1" = "#4575B4", "2" = "#91BFDB", "3" = "#FC8D59")
+)
+
+# Create heatmap annotations
+annotation <- HeatmapAnnotation(
+  Group = sample_groups$Group,
+  `10 Genes` = predictions$top_10_genes,
+  `100 Genes` = predictions$top_100_genes,
+  `1000 Genes` = predictions$top_1000_genes,
+  `10000 Genes` = predictions$top_10000_genes,
+  col = annotation_colors,
+  annotation_legend_param = list(
+    Group = list(title = "Group", at = c("enriched", "barren"), labels = c("Enriched", "Barren")),
+    `10 Genes` = list(title = "10 Genes Prediction"),
+    `100 Genes` = list(title = "100 Genes Prediction"),
+    `1000 Genes` = list(title = "1000 Genes Prediction"),
+    `10000 Genes` = list(title = "10000 Genes Prediction")
+  )
+)
+
+# Draw heatmap with the adjustments
+heatmap <- Heatmap(
+  as.matrix(heatmap_data),
+  name = "Expression",
+  top_annotation = annotation,
+  show_row_dend = TRUE,
+  show_column_dend = TRUE,
+  row_title = "Genes",
+  column_title = "Samples",
+  heatmap_legend_param = list(title = "Expression Level")
+)
+
+draw(heatmap)
+
+
+```
+
+## Summary of the Tables and Charts
+
+### Heatmap and Dendrograms:
+
+This analysis demonstrates that increasing the number of genes used in predictive models improves the stability and accuracy of classifications, with models trained on larger subsets (1000 and 10000 genes) providing more consistent predictions. The heatmap reveals distinct expression patterns that loosely correspond to the barren and enriched sample groups, indicating potential biological differences between these conditions. While models trained on fewer genes show greater variability in predictions, the larger subsets better capture these group-related patterns, underscoring the value of incorporating more genes to improve predictive performance and biological insight. The dendrogram clustering further highlights similarities within sample groups and among genes with shared expression patterns, suggesting functional relationships and group-specific expression profiles.
