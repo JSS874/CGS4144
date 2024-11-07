@@ -1,0 +1,690 @@
+```{r}
+# Create the data folder if it doesn't exist
+if (!dir.exists("data")) {
+  dir.create("data")
+}
+
+# Define the file path to the plots directory
+plots_dir <- "plots"
+
+# Create the plots folder if it doesn't exist
+if (!dir.exists(plots_dir)) {
+  dir.create(plots_dir)
+}
+
+# Define the file path to the results directory
+results_dir <- "results"
+
+# Create the results folder if it doesn't exist
+if (!dir.exists(results_dir)) {
+  dir.create(results_dir)
+}
+```
+
+
+```{r}
+# Define the file path to the data directory
+# Replace with the path of the folder the files will be in
+data_dir <- file.path("data", "ERP105973")
+
+# Declare the file path to the gene expression matrix file
+# inside directory saved as `data_dir`
+# Replace with the path to your dataset file
+data_file <- file.path(data_dir, "ERP105973.tsv")
+
+# Declare the file path to the metadata file
+# inside the directory saved as `data_dir`
+# Replace with the path to your metadata file
+metadata_file <- file.path(data_dir, "metadata_ERP105973.tsv")
+```
+
+```{r}
+# Check if the gene expression matrix file is at the path stored in `data_file`
+file.exists(data_file)
+
+# Check if the metadata file is at the file path stored in `metadata_file`
+file.exists(metadata_file)
+```
+
+```{r}
+# Load BiocManager if it's not already installed
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+# Install the mouse annotation package
+if (!("org.Ss.eg.db" %in% installed.packages())) {
+  # Install this package if it isn't installed yet
+  BiocManager::install("org.Ss.eg.db", update = FALSE)
+}
+```
+
+```{r}
+# Attach the library
+library(org.Ss.eg.db)
+
+# We will need this so we can use the pipe: %>%
+library(magrittr)
+```
+
+```{r}
+# Read in metadata TSV file
+metadata <- readr::read_tsv(metadata_file)
+
+# Read in data TSV file
+expression_df <- readr::read_tsv(data_file) %>%
+  # Tuck away the Gene ID column as row names
+  tibble::column_to_rownames("Gene")
+
+# Make the data in the order of the metadata
+expression_df <- expression_df %>%
+  dplyr::select(metadata$refinebio_accession_code)
+
+# Check if this is in the same order
+all.equal(colnames(expression_df), metadata$refinebio_accession_code)
+
+# Bring back the "Gene" column in preparation for mapping
+expression_df <- expression_df %>%
+  tibble::rownames_to_column("Gene")
+
+head(expression_df)
+```
+
+```{r}
+library(dplyr)
+
+# Calculate variance for each gene across samples (excluding the 'Gene' column)
+gene_variances <- expression_df %>%
+  rowwise() %>%
+  mutate(variance = var(c_across(starts_with("ERR")), na.rm = TRUE)) %>%
+  ungroup()
+
+# Select the top 5,000 most variable genes
+top_5000_genes <- gene_variances %>%
+  arrange(desc(variance)) %>%
+  slice_head(n = 5000)
+
+# Subset the data to only the top 5,000 genes and remove the variance column
+subset_5000_data <- top_5000_genes %>%
+  select(-variance)
+
+# Transpose the data: samples as rows, genes as columns
+transposed_5000_data <- subset_5000_data %>%
+  select(-Gene) %>%
+  as.matrix() %>%
+  t()
+
+#Scale the data (mean = 0, sd = 1)
+scaled_5000_data <- scale(transposed_5000_data)
+
+```
+
+```{r}
+# Function to subset and scale the top n variable genes
+get_top_variable_genes <- function(expression_df, n_genes) {
+  # Calculate variance for each gene across samples (excluding the 'Gene' column)
+  gene_variances <- expression_df %>%
+    rowwise() %>%
+    mutate(variance = var(c_across(starts_with("ERR")), na.rm = TRUE)) %>%
+    ungroup()
+
+  # Select the top n most variable genes
+  top_genes <- gene_variances %>%
+    arrange(desc(variance)) %>%
+    slice_head(n = n_genes)
+
+  # Subset the data to only the top n genes and remove the variance column
+  subset_data <- top_genes %>%
+    select(-variance)
+
+  # Transpose the data: samples as rows, genes as columns
+  transposed_data <- subset_data %>%
+    select(-Gene) %>%
+    as.matrix() %>%
+    t()
+
+  # Scale the data (mean = 0, sd = 1)
+  scaled_data <- scale(transposed_data)
+  
+  return(scaled_data)
+}
+
+# Example usage for different numbers of genes
+scaled_10_genes <- get_top_variable_genes(expression_df, 10)
+scaled_100_genes <- get_top_variable_genes(expression_df, 100)
+scaled_1000_genes <- get_top_variable_genes(expression_df, 1000)
+scaled_5000_genes <- get_top_variable_genes(expression_df, 5000)
+scaled_10000_genes <- get_top_variable_genes(expression_df, 10000)
+
+```
+
+
+```{r}
+# Install mlr3 and mlr3learners if not already installed
+if (!requireNamespace("mlr3", quietly = TRUE)) install.packages("mlr3")
+if (!requireNamespace("mlr3learners", quietly = TRUE)) install.packages("mlr3learners")
+if (!requireNamespace("kknn", quietly = TRUE)) install.packages("kknn")  # Install kknn package
+
+library(mlr3)
+library(mlr3learners)
+library(data.table)
+library(kknn)
+
+# Load metadata as labels
+labels <- metadata$refinebio_treatment
+
+# Ensure scaled_data is a data.table
+scaled_5000_data_dt <- as.data.table(scaled_5000_genes)
+
+# Add treatment column from labels
+scaled_5000_data_dt[, group := as.factor(labels)]
+
+# Assign gene names to the columns
+gene_names <- paste0("Gene_", 1:5000)
+setnames(scaled_5000_data_dt, old = names(scaled_5000_data_dt)[1:5000], new = gene_names)
+
+# Define the classification task
+task <- TaskClassif$new(id = "knn_task", backend = scaled_5000_data_dt, target = "group")
+
+# Initialize the KNN learner with k = 5
+learner <- lrn("classif.kknn", k = 5)
+
+# Train-test split (80% training, 20% testing)
+set.seed(42)
+train_set <- sample(task$nrow, 0.8 * task$nrow)
+test_set <- setdiff(seq_len(task$nrow), train_set)
+
+# Train the KNN model
+learner$train(task, row_ids = train_set)
+
+# Predict on the test set
+prediction <- learner$predict(task, row_ids = test_set)
+
+# Evaluate the model performance
+accuracy <- prediction$score(msr("classif.acc"))
+cat("Accuracy on test set:", accuracy, "\n")
+
+# Save accuracy to a CSV file
+accuracy_df <- data.frame(Metric = "Accuracy", Value = accuracy)
+write.csv(accuracy_df, "KNN_Treatment_Prediction_Accuracy.csv", row.names = FALSE)
+
+# View detailed performance metrics 
+confusion_matrix <- prediction$confusion  
+
+# Save confusion matrix to a CSV file
+confusion_matrix <- as.data.frame(as.table(confusion_matrix)) 
+write.csv(confusion_matrix, "KNN_Treatment_confusion_matrix.csv", row.names = FALSE)
+
+```
+```{r}
+# Install required packages if not already installed
+if (!requireNamespace("mlr3", quietly = TRUE)) install.packages("mlr3")
+if (!requireNamespace("mlr3learners", quietly = TRUE)) install.packages("mlr3learners")
+if (!requireNamespace("data.table", quietly = TRUE)) install.packages("data.table")
+
+# Load libraries
+library(mlr3)
+library(mlr3learners)
+library(data.table)
+
+# Load metadata as labels 
+labels <- metadata$refinebio_treatment 
+
+# Ensure scaled_data is a data.table
+scaled_data_dt <- as.data.table(scaled_5000_genes)
+scaled_data_dt[, group := as.factor(labels)]
+
+# Add SampleID
+scaled_data_dt[, SampleID := rownames(scaled_5000_genes)]
+
+# Load cluster results and rename column to 'cluster' for consistency
+clusters <- fread("kmeans_results.csv")
+setnames(clusters, "KMeans", "cluster")
+
+# Merge scaled_data_dt with clusters by SampleID
+scaled_data_dt <- merge(scaled_data_dt, clusters[, .(SampleID, cluster)], 
+                        by = "SampleID", all.x = TRUE)
+
+# Convert cluster to a factor
+scaled_data_dt[, cluster := as.factor(cluster)]
+scaled_data_dt[, SampleID := NULL]
+
+# Define the classification task for predicting clusters
+task <- TaskClassif$new(id = "knn_cluster_task", backend = scaled_data_dt, target = "cluster")
+
+# Initialize the KNN learner with k = 5
+learner <- lrn("classif.kknn", k = 5)
+
+# Train-test split (80% training, 20% testing)
+set.seed(42)
+train_set <- sample(task$nrow, 0.8 * task$nrow)
+test_set <- setdiff(seq_len(task$nrow), train_set)
+
+# Train the KNN model
+learner$train(task, row_ids = train_set)
+
+# Predict on the test set
+prediction <- learner$predict(task, row_ids = test_set)
+
+# Evaluate the model performance
+accuracy <- prediction$score(msr("classif.acc"))
+cat("Accuracy on test set:", accuracy, "\n")
+
+# Print detailed performance metrics 
+print(prediction$confusion)
+
+measure = msr("classif.acc")
+prediction$score(measure)
+
+# Save the accuracy to a CSV
+accuracy <- prediction$score(msr("classif.acc"))
+accuracy_df <- data.frame(Metric = "Accuracy", Value = accuracy)
+write.csv(accuracy_df, "KNN_accuracy_results.csv", row.names = FALSE)
+
+# Save the confusion matrix to a CSV
+confusion_matrix <- table(prediction$truth, prediction$response)
+
+# Convert to a matrix and set the row and column names
+confusion_matrix <- as.matrix(confusion_matrix)
+rownames(confusion_matrix) <- paste("Actual", rownames(confusion_matrix))
+colnames(confusion_matrix) <- paste("Predicted", colnames(confusion_matrix))
+
+# Save the confusion matrix to a CSV file with row and column names
+write.csv(confusion_matrix, "KNN_confusion_matrix.csv", row.names = TRUE)
+
+# Write to CSV
+prediction_df <- data.frame(SampleID = rownames(scaled_data), PredictedClass = prediction$response)
+write.csv(prediction_df, "KNN_prediction_results.csv", row.names = FALSE)
+
+
+```
+
+```{r}
+# Load required libraries
+library(dplyr)
+
+# Import each prediction file
+knn_results <- read.csv("KNN_prediction_results.csv")
+random_forest_results <- read.csv("RandomForest_combined_results.csv")
+linear_regression_results <- read.csv("linear_regression_prediction_results.csv")
+naive_bayes_results <- read.csv("NaiveBayesGroups.csv")
+svm_results <- read.csv("grant, a. svm_predictions.csv")
+
+# Rename columns to ensure consistency
+knn_results <- knn_results %>% rename(KNN = PredictedClass)
+random_forest_results <- random_forest_results %>% rename(RandomForest = PredictedClass)
+linear_regression_results <- linear_regression_results %>% rename(SampleID = sampleId, LinearRegression = predicted_class)
+svm_results <- svm_results %>% rename(SVM = PredictedClass)
+
+# Process Naive Bayes results (rename columns and select only needed columns)
+naive_bayes_results <- naive_bayes_results %>%
+  rename(SampleID = Sample, NaiveBayes = Predicted_Group) %>%
+  select(SampleID, NaiveBayes)
+
+# Merge all data by SampleID
+combined_results <- knn_results %>%
+  left_join(random_forest_results %>% select(SampleID, RandomForest), by = "SampleID") %>%
+  left_join(linear_regression_results %>% select(SampleID, LinearRegression), by = "SampleID") %>%
+  left_join(svm_results %>% select(SampleID, SVM), by = "SampleID") %>%
+  left_join(naive_bayes_results %>% select(SampleID, NaiveBayes), by = "SampleID")
+
+# View the combined matrix
+print(combined_results)
+
+# Save the combined results to a CSV
+write.csv(combined_results, "Combined_Predictions.csv", row.names = FALSE)
+
+
+```
+
+```{r}
+# Count how many models predict each class label for each sample
+model_counts <- combined_results %>%
+  rowwise() %>%
+  mutate(
+    Class1_Count = sum(c_across(KNN:NaiveBayes) == 1),
+    Class2_Count = sum(c_across(KNN:NaiveBayes) == 2),
+    Class3_Count = sum(c_across(KNN:NaiveBayes) == 3)
+  ) %>%
+  ungroup()
+
+# View the result
+print(model_counts)
+
+# Count how many models predict the same cluster for each sample
+model_counts <- model_counts %>%
+  rowwise() %>%
+  mutate(
+    SameCluster_Count = max(c(Class1_Count, Class2_Count, Class3_Count))
+  ) %>%
+  ungroup()
+
+# View the result
+print(model_counts)
+write.csv(model_counts, "Combined_Model_Counts.csv", row.names = FALSE)
+
+# Calculate stability of class label predictions
+model_counts <- model_counts %>%
+  rowwise() %>%
+  mutate(
+    LabelStability = sd(c_across(KNN:NaiveBayes))
+  ) %>%
+  ungroup()
+
+# Perform a correlation test between cluster stability and label stability
+cor_test <- cor.test(model_counts$SameCluster_Count, model_counts$LabelStability, method = "spearman")
+
+# Adjust p-values for multiple testing
+p_adjusted <- p.adjust(cor_test$p.value, method = "BH")
+
+# View results
+list(Correlation_Test = cor_test, Adjusted_P_Value = p_adjusted)
+
+# Create a data frame with the correlation test results
+cor_test_results <- data.frame(
+  Correlation_Coefficient = cor_test$estimate,
+  P_Value = cor_test$p.value,
+  Adjusted_P_Value = p_adjusted
+)
+
+# Export the correlation test results to a CSV file
+write.csv(cor_test_results, "correlation_test_results.csv", row.names = FALSE)
+
+
+
+```
+```{r}
+# Install required packages if not already installed
+if (!requireNamespace("mlr3", quietly = TRUE)) install.packages("mlr3")
+if (!requireNamespace("mlr3learners", quietly = TRUE)) install.packages("mlr3learners")
+if (!requireNamespace("data.table", quietly = TRUE)) install.packages("data.table")
+
+# Load libraries
+library(mlr3)
+library(mlr3learners)
+library(data.table)
+
+# Load metadata as labels
+labels <- metadata$refinebio_treatment  # Update if your grouping column has a different name
+
+# Initialize an empty list to store prediction results
+all_predictions <- list()
+
+# Function to run KNN on a given gene set and save results
+run_knn_on_genes <- function(gene_set, gene_set_name) {
+  # Ensure gene_set is a data.table and add 'group' column
+  scaled_data_dt <- as.data.table(gene_set)
+  scaled_data_dt[, group := as.factor(labels)]
+  
+  # Add SampleID 
+  scaled_data_dt[, SampleID := rownames(gene_set)]
+  
+  # Load cluster results and rename column to 'cluster' for consistency
+  clusters <- fread("kmeans_results.csv")
+  setnames(clusters, "KMeans", "cluster")
+  
+  # Merge scaled_data_dt with clusters by SampleID
+  scaled_data_dt <- merge(scaled_data_dt, clusters[, .(SampleID, cluster)], 
+                          by = "SampleID", all.x = TRUE)
+  
+  # Convert cluster to a factor
+  scaled_data_dt[, cluster := as.factor(cluster)]
+  scaled_data_dt[, SampleID := NULL]
+  
+  # Define the classification task for predicting clusters
+  task <- TaskClassif$new(id = paste0("knn_", gene_set_name, "_cluster_task"), 
+                          backend = scaled_data_dt, target = "cluster")
+  
+  # Initialize the KNN learner with k = 5
+  learner <- lrn("classif.kknn", k = 5)
+  
+  # Train-test split (80% training, 20% testing)
+  set.seed(42)
+  train_set <- sample(task$nrow, 0.8 * task$nrow)
+  test_set <- setdiff(seq_len(task$nrow), train_set)
+  
+  # Train the KNN model
+  learner$train(task, row_ids = train_set)
+  
+  # Predict on the test set
+  prediction <- learner$predict(task, row_ids = test_set)
+  
+  # Save the prediction results in a list
+  prediction_df <- data.frame(SampleID = rownames(gene_set), 
+                               PredictedClass = prediction$response)
+  
+  # Rename the PredictedClass column to indicate the gene set
+  colnames(prediction_df)[2] <- paste0(gene_set_name) 
+  
+  # Add this gene set's prediction results to the overall list
+  all_predictions[[gene_set_name]] <<- prediction_df
+}
+
+# Run KNN for different gene sets (10, 100, 1000, 10000 most variable genes)
+run_knn_on_genes(scaled_10_genes, "top_10_genes")
+run_knn_on_genes(scaled_100_genes, "top_100_genes")
+run_knn_on_genes(scaled_1000_genes, "top_1000_genes")
+run_knn_on_genes(scaled_10000_genes, "top_10000_genes")
+
+# Combine predictions into one data frame
+combined_predictions <- Reduce(function(x, y) merge(x, y, by = "SampleID", all = TRUE),
+                                all_predictions)
+
+# Reorder columns so that SampleID is first and then gene sets
+combined_predictions <- combined_predictions[, c("SampleID", "top_10_genes", "top_100_genes", "top_1000_genes", "top_10000_genes")]
+
+# Save the combined predictions to a CSV
+write.csv(combined_predictions, "Combined_KNN_predictions.csv", row.names = FALSE)
+
+
+```{r}
+# Load necessary libraries
+library(pROC)
+
+# Define the paths to the prediction files
+knn_file <- "Combined_KNN_predictions.csv"
+rf_file <- "RandomForest_predictions_by_gene_subset.csv"
+nb_file <- "NaiveBayesGroupsCombined.csv"
+lr_file <- "spitulnik_combined_predictions.csv"
+svm_file <- "grant, a. svm_auc_results.csv"
+
+# Load the prediction files into data frames
+knn_predictions <- read.csv(knn_file)
+rf_predictions <- read.csv(rf_file)
+nb_predictions <- read.csv(nb_file)
+lr_predictions <- read.csv(lr_file)
+svm_predictions <- read.csv(svm_file)
+
+# Load the true KMeans labels 
+true_clusters <- read.csv("kmeans_results.csv")  
+
+# Ensure SampleID is correctly named in all data frames
+colnames(knn_predictions)[1] <- "SampleID"
+colnames(rf_predictions)[1] <- "SampleID"
+colnames(nb_predictions)[1] <- "SampleID"
+colnames(lr_predictions)[1] <- "SampleID"
+colnames(svm_predictions)[1] <- "SampleID"
+colnames(true_clusters)[1] <- "SampleID"
+
+# For KNN
+colnames(knn_predictions) <- gsub("top_10_genes", "top_10_genes_knn", colnames(knn_predictions))
+colnames(knn_predictions) <- gsub("top_100_genes", "top_100_genes_knn", colnames(knn_predictions))
+colnames(knn_predictions) <- gsub("top_1000_genes", "top_1000_genes_knn", colnames(knn_predictions))
+colnames(knn_predictions) <- gsub("top_10000_genes", "top_10000_genes_knn", colnames(knn_predictions))
+
+# For Random Forest
+colnames(rf_predictions) <- gsub("top_10_genes", "top_10_genes_rf", colnames(rf_predictions))
+colnames(rf_predictions) <- gsub("top_100_genes", "top_100_genes_rf", colnames(rf_predictions))
+colnames(rf_predictions) <- gsub("top_1000_genes", "top_1000_genes_rf", colnames(rf_predictions))
+colnames(rf_predictions) <- gsub("top_10000_genes", "top_10000_genes_rf", colnames(rf_predictions))
+
+# Naive Bayes not needed for renaming
+
+# For Linear Regression
+colnames(lr_predictions) <- gsub("top_10_genes", "top_10_genes_lr", colnames(lr_predictions))
+colnames(lr_predictions) <- gsub("top_100_genes", "top_100_genes_lr", colnames(lr_predictions))
+colnames(lr_predictions) <- gsub("top_1000_genes", "top_1000_genes_lr", colnames(lr_predictions))
+colnames(lr_predictions) <- gsub("top_10000_genes", "top_10000_genes_lr", colnames(lr_predictions))
+
+# For SVM
+colnames(svm_predictions) <- gsub("top_10_genes", "top_10_genes_svm", colnames(svm_predictions))
+colnames(svm_predictions) <- gsub("top_100_genes", "top_100_genes_svm", colnames(svm_predictions))
+colnames(svm_predictions) <- gsub("top_1000_genes", "top_1000_genes_svm", colnames(svm_predictions))
+colnames(svm_predictions) <- gsub("top_10000_genes", "top_10000_genes_svm", colnames(svm_predictions))
+
+# Print the column names for each predictions file
+print(colnames(knn_predictions))
+print(colnames(rf_predictions))
+print(colnames(nb_predictions))
+print(colnames(lr_predictions))
+print(colnames(svm_predictions))
+
+# Merge all prediction datasets into a single data frame
+merged_data <- Reduce(function(x, y) merge(x, y, by = "SampleID", all = TRUE),
+                      list(knn_predictions, rf_predictions, nb_predictions, lr_predictions, svm_predictions, true_clusters))
+
+# Remove any duplicate columns 
+merged_data <- merged_data[!duplicated(colnames(merged_data))]
+
+# Ensure KMeans is a factor variable 
+merged_data$KMeans <- as.factor(merged_data$KMeans)
+
+# Check column names after renaming
+print(colnames(merged_data))
+
+# AUC Table to store the results
+auc_table <- data.frame(Method = character(), Subset = character(), AUC = numeric(), stringsAsFactors = FALSE)
+
+# Define the prediction methods and their respective gene subset columns
+prediction_methods <- list(
+  "KNN" = c("top_10_genes_knn", "top_100_genes_knn", "top_1000_genes_knn", "top_10000_genes_knn"),
+  "RandomForest" = c("top_10_genes_rf", "top_100_genes_rf", "top_1000_genes_rf", "top_10000_genes_rf"),
+  "LinearRegression" = c("top_10_genes_lr", "top_100_genes_lr", "top_1000_genes_lr", "top_10000_genes_lr"),
+  "SVM" = c("top_10_genes_svm", "top_100_genes_svm", "top_1000_genes_svm", "top_10000_genes_svm"),
+  "NaiveBayes" = c("top_10_genes_nb", "top_100_genes_nb", "top_1000_genes_nb", "top_10000_genes_nb")
+)
+
+
+# Loop through each prediction method and gene subset combination
+for (method in names(prediction_methods)) {
+  for (gene_count in prediction_methods[[method]]) {
+    
+    # Check if the column exists in the merged data before proceeding
+    if (!(gene_count %in% colnames(merged_data))) {
+      warning(paste("Column", gene_count, "does not exist in merged data. Skipping."))
+      next
+    }
+    
+    # Ensure the predictor is numeric (avoid errors if it's not already numeric)
+    merged_data[[gene_count]] <- as.numeric(merged_data[[gene_count]])
+
+    # Skip columns with NA values or empty columns
+    if (all(is.na(merged_data[[gene_count]]))) next
+
+    # Calculate the ROC and AUC for multi-class classification using multiclass.roc()
+    try({
+      if (length(unique(merged_data$KMeans)) == 2) {
+        # For binary classification, use roc()
+        roc_obj <- roc(merged_data$KMeans, merged_data[[gene_count]])
+      } else {
+        # For multi-class classification, use multiclass.roc()
+        roc_obj <- multiclass.roc(merged_data$KMeans, merged_data[[gene_count]])
+      }
+
+      auc_val <- auc(roc_obj)
+
+      # Append the AUC result to the auc_table data frame
+      auc_table <- rbind(auc_table, data.frame(Method = method, Subset = gene_count, AUC = auc_val))
+    }, silent = TRUE)  # Suppress errors during ROC calculation
+  }
+}
+
+# Print the AUC results for all methods
+print(auc_table)
+
+# Save the data frame to a CSV file
+write.csv(auc_table, "auc_results_table.csv", row.names = FALSE)
+
+```
+
+```{r}
+# Load necessary libraries
+library(pheatmap)
+
+scaled_5000_data_t <- t(scaled_5000_data)
+
+# Ensure the SampleID order matches in combined_results and metadata_combined
+combined_results <- combined_results[match(metadata_combined$SampleID, combined_results$SampleID), ]
+
+# Add the model predictions as columns to the scaled_5000_data (expression data)
+combined_data <- cbind(scaled_5000_data_t, combined_results[, -1])  # Remove SampleID from combined_results before binding
+
+# Convert combined_data to a matrix
+combined_data_matrix <- as.matrix(combined_data)
+
+# Ensure row names in combined_data_matrix match the SampleID from metadata_combined
+rownames(combined_data_matrix) <- metadata_combined$SampleID
+
+# Create annotations for Treatment and Model predictions
+model_annotations <- data.frame(
+  Treatment = metadata_combined$refinebio_treatment,  # Treatment information
+  KNN = as.factor(combined_results$KNN),  # Model prediction column for KNN
+  RandomForest = as.factor(combined_results$RandomForest),  # Model prediction column for RandomForest
+  LinearRegression = as.factor(combined_results$LinearRegression),  # and so on...
+  SVM = as.factor(combined_results$SVM),
+  NaiveBayes = as.factor(combined_results$NaiveBayes)
+)
+
+# Set row names for model annotations to match the SampleID order
+rownames(model_annotations) <- metadata_combined$SampleID
+
+library(ComplexHeatmap)
+
+# Define a custom color palette for gene expression 
+gene_expression_colors <- colorRampPalette(c("blue", "white", "red"))(100)
+
+# Define a custom color palette for categorical model predictions 
+model_prediction_colors <- list(
+  KNN = c("1" = "red", "2" = "green", "3" = "blue"),
+  RandomForest = c("1" = "red", "2" = "green", "3" = "blue"),
+  LinearRegression = c("1" = "red", "2" = "green", "3" = "blue"),
+  SVM = c("1" = "red", "2" = "green", "3" = "blue"),
+  NaiveBayes = c("1" = "red", "2" = "green", "3" = "blue")
+)
+
+# Define top annotation for treatment and model predictions
+model_top_annotation <- HeatmapAnnotation(
+  Treatment = model_annotations$Treatment,
+  KNN = model_annotations$KNN,
+  RandomForest = model_annotations$RandomForest,
+  LinearRegression = model_annotations$LinearRegression,
+  SVM = model_annotations$SVM,
+  NaiveBayes = model_annotations$NaiveBayes,
+  col = model_prediction_colors  # Add custom colors for the model predictions
+)
+
+# Ensure that combined_data_matrix has the correct orientation: samples as rows, genes and model predictions as columns
+combined_data_matrix <- t(combined_data_matrix)  
+
+head(combined_data_matrix)
+
+# Create the heatmap
+Heatmap(
+  combined_data_matrix,  
+  name = "Gene Expression",  
+  col = gene_expression_colors,  
+  top_annotation = model_top_annotation,  
+  show_row_names = TRUE,  
+  show_column_names = FALSE, 
+  cluster_rows = TRUE, 
+  cluster_columns = TRUE, 
+  clustering_distance_rows = "euclidean", 
+  clustering_distance_columns = "euclidean", 
+  clustering_method_rows = "complete",  
+  clustering_method_columns = "complete",  
+  show_heatmap_legend = TRUE,  
+  column_title = "Samples", 
+  row_title = "Genes"  
+)
+
+```
+
